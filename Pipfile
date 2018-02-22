@@ -1,0 +1,17 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[dev-packages]
+
+ipython = "*"
+
+
+[packages]
+
+flask = "*"
+kin = { git = "git@github.com:kinfoundation/kin-core-python.git", editable = true}
+schematics = "*"
