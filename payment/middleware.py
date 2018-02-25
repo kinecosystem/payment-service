@@ -1,20 +1,11 @@
 import time
 from functools import wraps
-from logging import getLogger
 from flask import request, jsonify
+from .errors import BaseError
+from .log import get as get_log
 
-logger = getLogger()
 
-
-class BaseError(Exception):
-    http_code = 400
-    code = 4000
-
-    def __init__(self, message):
-        self.message = message
-
-    def to_dict(self):
-        return {'code': self.code, 'error': self.message}
+log = get_log()
 
 
 def handle_errors(f):
@@ -27,9 +18,9 @@ def handle_errors(f):
         except Exception as e:
             if not isinstance(e, BaseError):
                 e = BaseError(str(e))
-            logger.exception('uncaught error {}, {}, {}'.format(e, e.to_dict(), e.message))
+            log.exception('uncaught error', error=e, payload=e.to_dict(), message=e.message)
             return jsonify(e.to_dict()), e.http_code
         finally:
-            logger.info('path {} took {}'.format(request.path, time.time() - start_time))
+            log.info('response time', path=request.path, time=time.time() - start_time)
 
     return inner
