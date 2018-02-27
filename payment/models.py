@@ -1,3 +1,4 @@
+import json
 from collections import namedtuple
 from datetime import datetime
 from schematics import Model
@@ -27,7 +28,7 @@ class Wallet(Model):
              if coin.asset_code == kin_asset.code
              and coin.asset_issuer == kin_asset.issuer), 0))
         wallet.native_balance = int(next(
-            (coin.balance for coin in data.balances 
+            (coin.balance for coin in data.balances
              if coin.asset_type == 'native'), 0))
         return wallet
 
@@ -37,6 +38,7 @@ class Payment(Model):
     app_id = StringType()
     order_id = StringType()
     wallet_address = StringType()
+    callback = StringType()  # a webhook to call when a payment is complete
 
 
 class Order(Model):
@@ -69,7 +71,7 @@ class Order(Model):
     def create_memo(cls, app_id, order_id):
         """serialize args to the memo string."""
         return '1-{}-{}'.format(app_id, order_id)
-   
+
     @classmethod
     def get_by_transaction_id(cls, tx_id):
         for t in db.values():
@@ -83,3 +85,6 @@ class Order(Model):
 
     def save(self):
         db[self.id] = self.to_primitive()
+
+    def __str__(self):
+        return json.dumps(self.to_primitive())
