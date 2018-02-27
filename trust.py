@@ -4,7 +4,7 @@ import sys
 
 def trust_kin(private_seed: str):
     sdk = kin.SDK(network='TESTNET', base_seed=private_seed)
-    sdk._trust_asset(kin.sdk.KIN_ASSET_TEST)
+    sdk._trust_asset(sdk.kin_asset)
 
 
 if __name__ == '__main__':

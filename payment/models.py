@@ -1,7 +1,7 @@
 from collections import namedtuple
 from datetime import datetime
 from schematics import Model
-from schematics.types import StringType, IntType, DateType
+from schematics.types import StringType, IntType, DateTimeType
 
 
 Memo = namedtuple('Memo', ['app_id', 'order_id'])
@@ -18,6 +18,19 @@ class Wallet(Model):
     kin_balance = IntType()
     native_balance = IntType()
 
+    @classmethod
+    def from_blockchain(cls, data, kin_asset):
+        wallet = Wallet()
+        wallet.wallet_address = data.id
+        wallet.kin_balance = int(next(
+            (coin.balance for coin in data.balances
+             if coin.asset_code == kin_asset.code
+             and coin.asset_issuer == kin_asset.issuer), 0))
+        wallet.native_balance = int(next(
+            (coin.balance for coin in data.balances 
+             if coin.asset_type == 'native'), 0))
+        return wallet
+
 
 class Payment(Model):
     amount = IntType()
@@ -33,7 +46,7 @@ class Order(Model):
     recipient_address = StringType()
     sender_address = StringType()
     amount = IntType()
-    timestamp = DateType(default=datetime.utcnow())
+    timestamp = DateTimeType(default=datetime.utcnow())
 
     @classmethod
     def from_blockchain(cls, data):
@@ -44,6 +57,7 @@ class Order(Model):
         t.sender_address = data.operations[0].from_address
         t.recipient_address = data.operations[0].to_address
         t.amount = int(data.operations[0].amount)
+        t.timestamp = data.created_at
         return t
 
     @classmethod

@@ -1,7 +1,7 @@
 import kin
 from . import config
 from .log import get as get_log
-from .models import Order
+from .models import Order, Wallet
 
 
 log = get_log()
@@ -19,10 +19,9 @@ def create_wallet(public_address: str) -> None:
     log.info('create wallet transaction', tx_id=tx_id)
 
 
-def get_wallet(public_address: str): # -> AccountData:
+def get_wallet(public_address: str) -> Wallet:
     data = kin_sdk.get_account_data(public_address)
-    log.info('got wallet data', data=data)
-    return # AccountData()
+    return Wallet.from_blockchain(data, kin_sdk.kin_asset)
 
 
 def pay_to(public_address: str, amount: int, app_id: str, order_id: str) -> Order:
@@ -30,5 +29,9 @@ def pay_to(public_address: str, amount: int, app_id: str, order_id: str) -> Orde
     log.info('sending kin to', address=public_address)
     memo = Order.create_memo(app_id, order_id)
     tx_id = kin_sdk.send_kin(public_address, amount, memo)
+    return tx_id
+
+
+def get_transaction_data(tx_id):
     data = kin_sdk.get_transaction_data(tx_id)
     return Order.from_blockchain(data)

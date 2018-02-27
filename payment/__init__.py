@@ -1,3 +1,4 @@
+import time
 from flask import Flask, request, jsonify
 from .middleware import handle_errors
 from .models import Order, WalletAddress, Payment
@@ -57,8 +58,17 @@ def pay():
         except KeyError:
             pass
 
-        t = blockchain.pay_to(payment.wallet_address, payment.amount,
-                              payment.app_id, payment.order_id)
-        t.save()
+        tx_id = blockchain.pay_to(payment.wallet_address, payment.amount,
+                                  payment.app_id, payment.order_id)
+        for i in range(3):
+            try:
+                t = blockchain.get_transaction_data(tx_id)
+                t.save()
+                break
+            except Exception:
+                if i == 2:
+                    raise
+                else:
+                    time.sleep(0.1)
 
         return jsonify(t.to_primitive())
