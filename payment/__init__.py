@@ -1,4 +1,3 @@
-import time
 from flask import Flask, request, jsonify
 from .middleware import handle_errors
 from .models import Order, WalletAddress, Payment
@@ -6,6 +5,7 @@ from .utils import lock
 from . import blockchain
 from .errors import AlreadyExistsError
 from . import log
+from kin import SdkHorizonError
 
 
 app = Flask(__name__)
@@ -19,7 +19,13 @@ def create_wallet():
 
     # wallet creation is idempotent - no locking needed
     # XXX should be async
-    blockchain.create_wallet(body.wallet_address)
+    try:
+        blockchain.create_wallet(body.wallet_address)
+    except SdkHorizonError as e:
+        if e.extras.result_codes.operations[0] == 'op_already_exists':
+            pass
+        else:
+            raise
 
     return jsonify(), 202
 
@@ -43,7 +49,6 @@ def get_order(order_id):
 def pay():
     payment = Payment(request.get_json())
 
-    # double checked locking
     try:
         t = Order.get(payment.order_id)
         raise AlreadyExistsError('order already exists')
