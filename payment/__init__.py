@@ -24,6 +24,7 @@ def create_wallet():
         blockchain.create_wallet(body.wallet_address)
     except SdkHorizonError as e:
         if e.extras.result_codes.operations[0] == 'op_already_exists':
+            logger.info('wallet already exists - ok')
             pass
         else:
             raise

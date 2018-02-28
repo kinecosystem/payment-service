@@ -5,6 +5,10 @@ from . import blockchain
 from .models import Order
 from queue import Queue
 from threading import Thread
+from .log import get as get_log
+
+
+log = get_log()
 
 
 class PayQueue(object):
@@ -30,7 +34,7 @@ def do_work(payment):
         def pay():
             try:
                 order = Order.get(payment.order_id)
-                print('order is already complete - not double spending: {}'.format(order))
+                log.info('order is already complete - not double spending', order=order)
                 return json.dumps(order.to_primitive())
             except KeyError:
                 pass
@@ -45,7 +49,7 @@ def do_work(payment):
             order = get_transaction_data(tx_id)
             order.save()
 
-            print('order complete - submit back to callback payment.callback: {}'.format(order))
+            log.info('order complete - submit back to callback payment.callback', order=order)
 
             return json.dumps(order.to_primitive())
 
@@ -55,4 +59,4 @@ def do_work(payment):
         def callback():
             return requests.get(payment.callback).json()
         response = callback() 
-        print('callback response: {}'.format(response))
+        log.info('callback response', response=response, order=order)
