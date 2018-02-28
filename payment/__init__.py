@@ -2,15 +2,14 @@ from flask import Flask, request, jsonify
 from .middleware import handle_errors
 from .models import Order, WalletAddress, Payment
 from . import blockchain
-from .errors import AlreadyExistsError
-from . import log
-from kin import SdkHorizonError
+from .errors import AlreadyExistsError, OrderNotFoundError
+from .log import init as init_log
 from .queue import PayQueue
 
 
 app = Flask(__name__)
 pay_queue = PayQueue(10)
-logger = log.init()
+log = init_log()
 
 
 @app.route('/wallets', methods=['POST'])
@@ -20,14 +19,7 @@ def create_wallet():
 
     # wallet creation is idempotent - no locking needed
     # XXX should be async
-    try:
-        blockchain.create_wallet(body.wallet_address)
-    except SdkHorizonError as e:
-        if e.extras.result_codes.operations[0] == 'op_already_exists':
-            logger.info('wallet already exists - ok')
-            pass
-        else:
-            raise
+    blockchain.create_wallet(body.wallet_address, body.app_id)
 
     return jsonify(), 202
 
@@ -54,7 +46,7 @@ def pay():
     try:
         Order.get(payment.order_id)
         raise AlreadyExistsError('order already exists')
-    except KeyError:
+    except OrderNotFoundError:
         pass
     
     pay_queue.put(payment)
