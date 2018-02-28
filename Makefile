@@ -1,7 +1,16 @@
 run:
-	source ./secrets.sh && pipenv run python main.py
+	. ./secrets.sh && pipenv run python main.py
 
 shell:
-	source ./secrets.sh && pipenv run ipython
+	. ./secrets.sh && pipenv run ipython
 
-.PHONY: shell run
+run-prod:
+	# XXX change to gunicorn
+	. ./secrets.sh && python3 main.py
+
+install-prod:
+	pipenv run pip freeze > requirements.txt
+	pip3 install requirements.txt
+
+
+.PHONY: shell run run-prod install-prod

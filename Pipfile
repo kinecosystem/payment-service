@@ -13,7 +13,7 @@ ipython = "*"
 [packages]
 
 flask = "*"
-kin = { git = "https://github.com/kinfoundation/kin-core-python.git", editable = true}
+kin = {git = "https://github.com/kinfoundation/kin-core-python.git", ref = "80d7767af6d7dd2ec590720c9083ad7fe3346e2e"}
 schematics = "*"
 structlog = "*"
 requests = "*"
