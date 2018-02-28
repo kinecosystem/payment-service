@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType
+from .errors import OrderNotFoundError
 
 
 Memo = namedtuple('Memo', ['app_id', 'order_id'])
@@ -12,6 +13,7 @@ db = {}
 class WalletAddress(Model):
     wallet_address = StringType()
     app_id = StringType()
+    # XXX validate should raise 400 error
 
 
 class Wallet(Model):
@@ -81,7 +83,10 @@ class Order(Model):
 
     @classmethod
     def get(cls, order_id):
-        return Order(db[order_id])
+        try:
+            return Order(db[order_id])
+        except KeyError:
+            raise OrderNotFoundError(order_id)
 
     def save(self):
         db[self.id] = self.to_primitive()

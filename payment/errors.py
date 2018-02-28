@@ -12,3 +12,8 @@ class BaseError(Exception):
 class AlreadyExistsError(BaseError):
     http_code = 409  # conflict
     code = 4091
+
+
+class OrderNotFoundError(BaseError):
+    http_code = 404
+    code = 4041
