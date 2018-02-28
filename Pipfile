@@ -16,3 +16,4 @@ flask = "*"
 kin = { git = "git@github.com:kinfoundation/kin-core-python.git", editable = true}
 schematics = "*"
 structlog = "*"
+requests = "*"
