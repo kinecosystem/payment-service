@@ -10,13 +10,21 @@ Memo = namedtuple('Memo', ['app_id', 'order_id'])
 db = {}
 
 
-class WalletAddress(Model):
+class ModelWithStr(Model):
+    def __str__(self):
+        return json.dumps(self.to_primitive())
+
+    def __repr__(self):
+        return str(self)
+
+
+class WalletAddress(ModelWithStr):
     wallet_address = StringType()
     app_id = StringType()
     # XXX validate should raise 400 error
 
 
-class Wallet(Model):
+class Wallet(ModelWithStr):
     wallet_address = StringType()
     kin_balance = IntType()
     native_balance = IntType()
@@ -35,7 +43,7 @@ class Wallet(Model):
         return wallet
 
 
-class Payment(Model):
+class Payment(ModelWithStr):
     amount = IntType()
     app_id = StringType()
     order_id = StringType()
@@ -43,7 +51,7 @@ class Payment(Model):
     callback = StringType()  # a webhook to call when a payment is complete
 
 
-class Order(Model):
+class Order(ModelWithStr):
     id = StringType()
     app_id = StringType()
     transaction_id = StringType()
@@ -79,17 +87,14 @@ class Order(Model):
         for t in db.values():
             if t.transaction_id == tx_id:
                 return Order(t)
-        raise KeyError(tx_id)
+        raise OrderNotFoundError('order with transaction {} not found'.format(tx_id))
 
     @classmethod
     def get(cls, order_id):
         try:
             return Order(db[order_id])
         except KeyError:
-            raise OrderNotFoundError(order_id)
+            raise OrderNotFoundError('order {} not found'.format(order_id))
 
     def save(self):
         db[self.id] = self.to_primitive()
-
-    def __str__(self):
-        return json.dumps(self.to_primitive())

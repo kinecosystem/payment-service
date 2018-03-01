@@ -1,5 +1,5 @@
 run:
-	. ./secrets.sh && pipenv run python main.py
+	PAYMENT_PORT=5000 . ./secrets.sh && pipenv run python main.py
 
 shell:
 	. ./secrets.sh && pipenv run ipython

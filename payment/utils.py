@@ -14,7 +14,7 @@ def lock(key):
     _lock.release()
 
 
-def retry(times):
+def retry(times, delay=0.3):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -25,6 +25,6 @@ def retry(times):
                     if i == times - 1:
                         raise
                     else:
-                        time.sleep(0.1)
+                        time.sleep(delay)
         return wrapper
     return decorator

@@ -2,6 +2,7 @@ import kin
 from . import config
 from .log import get as get_log
 from .models import Order, Wallet
+from kin import SdkHorizonError
 
 
 log = get_log()
@@ -12,11 +13,23 @@ kin_sdk = kin.SDK(
     channel_seeds=config.STELLAR_CHANNEL_SEEDS)
 
 
-def create_wallet(public_address: str) -> None:
+def create_wallet(public_address: str, app_id: str) -> None:
     """create a wallet."""
+    if kin_sdk.check_account_exists(public_address):
+        log.info('wallet already exists - ok', public_address=public_address)
+        return
+
+    memo = '1-{}'.format(app_id)
     initial_xlm_amount = config.STELLAR_INITIAL_XLM_AMOUNT
-    tx_id = kin_sdk.create_account(public_address, starting_balance=initial_xlm_amount)
-    log.info('create wallet transaction', tx_id=tx_id)
+    try:
+        tx_id = kin_sdk.create_account(
+            public_address, starting_balance=initial_xlm_amount, memo_text=memo)
+        log.info('create wallet transaction', tx_id=tx_id)
+    except SdkHorizonError as e:
+        if e.extras.result_codes.operations[0] == 'op_already_exists':
+            log.info('wallet already exists - ok', public_address=public_address)
+        else:
+            raise
 
 
 def get_wallet(public_address: str) -> Wallet:
@@ -28,7 +41,7 @@ def pay_to(public_address: str, amount: int, app_id: str, order_id: str) -> Orde
     """send kins to an address"""
     log.info('sending kin to', address=public_address)
     memo = Order.create_memo(app_id, order_id)
-    tx_id = kin_sdk.send_kin(public_address, amount, memo)
+    tx_id = kin_sdk.send_kin(public_address, amount, memo_text=memo)
     return tx_id
 
 
