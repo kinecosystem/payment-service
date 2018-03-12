@@ -2,12 +2,13 @@ import json
 from collections import namedtuple
 from datetime import datetime
 from schematics import Model
-from schematics.types import StringType, IntType, DateTimeType
+from schematics.types import StringType, IntType, DateTimeType, ListType
 from .errors import OrderNotFoundError
 
 
 Memo = namedtuple('Memo', ['app_id', 'order_id'])
 db = {}
+watcher_db = {}
 
 
 class ModelWithStr(Model):
@@ -18,7 +19,7 @@ class ModelWithStr(Model):
         return str(self)
 
 
-class WalletAddress(ModelWithStr):
+class WalletRequest(ModelWithStr):
     wallet_address = StringType()
     app_id = StringType()
     # XXX validate should raise 400 error
@@ -43,11 +44,11 @@ class Wallet(ModelWithStr):
         return wallet
 
 
-class Payment(ModelWithStr):
+class OrderRequest(ModelWithStr):
     amount = IntType()
     app_id = StringType()
+    recipient_address = StringType()
     order_id = StringType()
-    wallet_address = StringType()
     callback = StringType()  # a webhook to call when a payment is complete
 
 
@@ -98,3 +99,12 @@ class Order(ModelWithStr):
 
     def save(self):
         db[self.id] = self.to_primitive()
+
+
+class Watcher(ModelWithStr):
+    wallet_addresses = ListType(StringType)
+    callback = StringType()  # a webhook to call when a payment is complete
+    service_id = StringType()
+
+    def save(self):
+        watcher_db[self.service_id] = self

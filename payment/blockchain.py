@@ -38,7 +38,7 @@ def get_wallet(public_address: str) -> Wallet:
 
 
 def pay_to(public_address: str, amount: int, app_id: str, order_id: str) -> Order:
-    """send kins to an address"""
+    """send kins to an address."""
     log.info('sending kin to', address=public_address)
     memo = Order.create_memo(app_id, order_id)
     tx_id = kin_sdk.send_kin(public_address, amount, memo_text=memo)
