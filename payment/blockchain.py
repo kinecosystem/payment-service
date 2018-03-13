@@ -1,7 +1,7 @@
 import kin
 from . import config
 from .log import get as get_log
-from .models import Order, Wallet
+from .models import Payment, Wallet
 from kin import SdkHorizonError
 
 
@@ -37,14 +37,14 @@ def get_wallet(public_address: str) -> Wallet:
     return Wallet.from_blockchain(data, kin_sdk.kin_asset)
 
 
-def pay_to(public_address: str, amount: int, app_id: str, order_id: str) -> Order:
+def pay_to(public_address: str, amount: int, app_id: str, payment_id: str) -> Payment:
     """send kins to an address."""
     log.info('sending kin to', address=public_address)
-    memo = Order.create_memo(app_id, order_id)
+    memo = Payment.create_memo(app_id, payment_id)
     tx_id = kin_sdk.send_kin(public_address, amount, memo_text=memo)
     return tx_id
 
 
 def get_transaction_data(tx_id):
     data = kin_sdk.get_transaction_data(tx_id)
-    return Order.from_blockchain(data)
+    return Payment.from_blockchain(data)

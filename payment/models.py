@@ -3,10 +3,10 @@ from collections import namedtuple
 from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType, ListType
-from .errors import OrderNotFoundError
+from .errors import PaymentNotFoundError
 
 
-Memo = namedtuple('Memo', ['app_id', 'order_id'])
+Memo = namedtuple('Memo', ['app_id', 'payment_id'])
 db = {}
 watcher_db = {}
 
@@ -44,15 +44,15 @@ class Wallet(ModelWithStr):
         return wallet
 
 
-class OrderRequest(ModelWithStr):
+class PaymentRequest(ModelWithStr):
     amount = IntType()
     app_id = StringType()
     recipient_address = StringType()
-    order_id = StringType()
+    id = StringType()
     callback = StringType()  # a webhook to call when a payment is complete
 
 
-class Order(ModelWithStr):
+class Payment(ModelWithStr):
     id = StringType()
     app_id = StringType()
     transaction_id = StringType()
@@ -63,8 +63,8 @@ class Order(ModelWithStr):
 
     @classmethod
     def from_blockchain(cls, data):
-        t = Order()
-        t.id = cls.parse_memo(data.memo).order_id
+        t = Payment()
+        t.id = cls.parse_memo(data.memo).payment_id
         t.app_id = cls.parse_memo(data.memo).app_id
         t.transaction_id = data.operations[0].id
         t.sender_address = data.operations[0].from_address
@@ -75,27 +75,27 @@ class Order(ModelWithStr):
 
     @classmethod
     def parse_memo(cls, memo):
-        version, app_id, order_id = memo.split('-')
-        return Memo(app_id, order_id)
+        version, app_id, payment_id = memo.split('-')
+        return Memo(app_id, payment_id)
 
     @classmethod
-    def create_memo(cls, app_id, order_id):
+    def create_memo(cls, app_id, payment_id):
         """serialize args to the memo string."""
-        return '1-{}-{}'.format(app_id, order_id)
+        return '1-{}-{}'.format(app_id, payment_id)
 
     @classmethod
     def get_by_transaction_id(cls, tx_id):
         for t in db.values():
             if t.transaction_id == tx_id:
-                return Order(t)
-        raise OrderNotFoundError('order with transaction {} not found'.format(tx_id))
+                return Payment(t)
+        raise PaymentNotFoundError('payment with transaction {} not found'.format(tx_id))
 
     @classmethod
-    def get(cls, order_id):
+    def get(cls, payment_id):
         try:
-            return Order(db[order_id])
+            return Payment(db[payment_id])
         except KeyError:
-            raise OrderNotFoundError('order {} not found'.format(order_id))
+            raise PaymentNotFoundError('payment {} not found'.format(payment_id))
 
     def save(self):
         db[self.id] = self.to_primitive()

@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from .middleware import handle_errors
-from .models import Order, WalletRequest, OrderRequest, Watcher
+from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from . import blockchain
-from .errors import AlreadyExistsError, OrderNotFoundError
+from .errors import AlreadyExistsError, PaymentNotFoundError
 from .log import init as init_log
 from .queue import PayQueue
 from . import watcher as watcher_service
@@ -32,22 +32,22 @@ def get_wallet(wallet_address):
     return jsonify(w.to_primitive())
 
 
-@app.route('/orders/<order_id>', methods=['GET'])
+@app.route('/payments/<payment_id>', methods=['GET'])
 @handle_errors
-def get_order(order_id):
-    order = Order.get(order_id)
-    return jsonify(order.to_primitive())
+def get_payment(payment_id):
+    payment = Payment.get(payment_id)
+    return jsonify(payment.to_primitive())
 
 
-@app.route('/orders', methods=['POST'])
+@app.route('/payments', methods=['POST'])
 @handle_errors
 def pay():
-    payment = OrderRequest(request.get_json())
+    payment = PaymentRequest(request.get_json())
 
     try:
-        Order.get(payment.order_id)
-        raise AlreadyExistsError('order already exists')
-    except OrderNotFoundError:
+        Payment.get(payment.id)
+        raise AlreadyExistsError('payment already exists')
+    except PaymentNotFoundError:
         pass
     
     pay_queue.put(payment)
