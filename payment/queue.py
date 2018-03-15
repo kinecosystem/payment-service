@@ -36,6 +36,7 @@ class PayQueue(object):
 def do_work(payment):
     """lock, try to pay and callback."""
     with lock('payment:{}'.format(payment.id)):
+        # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         payment = pay(payment)
 
         @retry(5, 0.2)

@@ -108,3 +108,7 @@ class Watcher(ModelWithStr):
 
     def save(self):
         watcher_db[self.service_id] = self
+
+    @classmethod
+    def get_all(cls):
+        return watcher_db.values()

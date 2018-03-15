@@ -9,8 +9,9 @@ from . import watcher as watcher_service
 
 
 app = Flask(__name__)
-pay_queue = PayQueue(10)
+pay_queue = PayQueue(2)
 log = init_log()
+watcher_service.init()
 
 
 @app.route('/wallets', methods=['POST'])
@@ -54,13 +55,13 @@ def pay():
     return jsonify(), 201
 
 
-@app.route('/watcher/<service_id>', methods=['PUT'])
+@app.route('/watchers/<service_id>', methods=['PUT'])
 @handle_errors
 def watch(service_id):
     body = request.get_json()
     body['service_id'] = service_id
     watcher = Watcher(body)
     watcher.save()
-    watcher_service.start_watcher(watcher)
+    watcher_service.start_monitor(watcher)
 
     return jsonify(), 201
