@@ -1,5 +1,4 @@
 import requests
-import json
 from .utils import lock, retry
 from . import blockchain
 from .models import Payment
@@ -33,34 +32,36 @@ class PayQueue(object):
                 log.exception('worker failed with: {}'.format(e))
 
 
-def do_work(payment):
+def do_work(payment_request):
     """lock, try to pay and callback."""
-    with lock('payment:{}'.format(payment.id)):
+    with lock('payment:{}'.format(payment_request.id)):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
-        payment = pay(payment)
+        payment = pay(payment_request)
 
         @retry(5, 0.2)
-        def callback(payment):
-            return requests.post(payment.callback, json=payment.to_primitive()).json()
+        def callback(payment, payment_request):
+            return requests.post(payment_request.callback, json=payment.to_primitive()).json()
 
-        response = callback(payment)
+        response = callback(payment, payment_request)
         log.info('callback response', response=response, payment=payment)
 
 
-def pay(payment):
+def pay(payment_request):
     try:
-        payment = Payment.get(payment.id)
+        payment = Payment.get(payment_request.id)
         log.info('payment is already complete - not double spending', payment=payment)
         return payment
     except PaymentNotFoundError:
         pass
 
-    log.info('trying to pay', payment_id=payment.id)
+    log.info('trying to pay', payment_id=payment_request.id)
 
-    tx_id = blockchain.pay_to(payment.wallet_address, payment.amount,
-                              payment.app_id, payment.id)
+    tx_id = blockchain.pay_to(payment_request.recipient_address,
+                              payment_request.amount,
+                              payment_request.app_id,
+                              payment_request.id)
 
-    log.info('payed transaction', tx_id=tx_id, payment_id=payment.id)
+    log.info('payed transaction', tx_id=tx_id, payment_id=payment_request.id)
 
     @retry(10, 3)
     def get_transaction_data(tx_id):
