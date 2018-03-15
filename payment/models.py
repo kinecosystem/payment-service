@@ -112,3 +112,11 @@ class Watcher(ModelWithStr):
     @classmethod
     def get_all(cls):
         return watcher_db.values()
+
+
+# for testing:
+watcher_db['kik'] = Watcher({
+    'wallet_addresses': ['GC3VEVNMPOIFIQOKUYFROWR6LWQQM57OQSWLLD6TGDIPOA5S6UXQWHVL'],
+    'callback': 'http://localhost:3000/v1/internal/payments',
+    'service_id': 'kik',
+})
