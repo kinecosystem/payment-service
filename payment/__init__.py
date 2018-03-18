@@ -64,4 +64,4 @@ def watch(service_id):
     watcher.save()
     watcher_service.start_monitor(watcher)
 
-    return jsonify(), 201
+    return jsonify(watcher.to_primitive())
