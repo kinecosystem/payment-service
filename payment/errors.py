@@ -14,6 +14,6 @@ class AlreadyExistsError(BaseError):
     code = 4091
 
 
-class OrderNotFoundError(BaseError):
+class PaymentNotFoundError(BaseError):
     http_code = 404
     code = 4041
