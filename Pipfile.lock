@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "18cdc4f6e893f804749183708d60ad056f44b6c518a6e4002874686d872f0ec9"
+            "sha256": "dcd1b084556ab0d33f7323d5027fbfcfd2390e3030f2bce79be834ffc5577401"
         },
         "host-environment-markers": {
             "implementation_name": "cpython",
@@ -76,9 +76,8 @@
             "version": "==2.10"
         },
         "kin": {
-            "editable": true,
-            "git": "git@github.com:kinfoundation/kin-core-python.git",
-            "ref": "80d7767af6d7dd2ec590720c9083ad7fe3346e2e"
+            "git": "https://github.com/kinfoundation/kin-core-python.git",
+            "ref": "e6b5eca"
         },
         "markupsafe": {
             "hashes": [
