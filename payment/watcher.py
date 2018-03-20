@@ -23,6 +23,9 @@ def start_monitor(watcher):
     def on_transaction(address, tx_data):
         try:
             payment = Payment.from_blockchain(tx_data)
+        except ValueError as e:  # XXX memo not in right format - set a custom parsingMemoError
+            log.exception('failed to parse payment', address=address, error=e)
+            return
         except Exception as e:
             log.exception('failed to parse payment', address=address, tx_data=tx_data, error=e)
             return
@@ -35,20 +38,6 @@ def start_monitor(watcher):
         log.info('callback response', response=response, service_id=watcher.service_id, payment=payment)
 
     log.info('starting monitor', watcher=watcher)
-    kin_sdk.monitor_accounts_kin_payments(watcher.wallet_addresses, on_transaction)  # XXX this starts a thread that I have no control over :(
 
-# XXX testing
-
-def print_me(address, data):
-    try:
-        print('='*100)
-        print('got data1:', address, data)
-        payment = Payment.from_blockchain(data)
-        print('got data2:', payment)
-        print('='*100)
-    except Exception as e:
-        print('failed', e)
-
-
-def blah(address):
-    kin_sdk.monitor_accounts_kin_payments([address], print_me)  # XXX this starts a thread that I have no control over :(
+    if watcher.wallet_addresses:
+        kin_sdk.monitor_accounts_kin_payments(watcher.wallet_addresses, on_transaction)  # XXX this starts a thread that I have no control over :(

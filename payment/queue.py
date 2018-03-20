@@ -56,6 +56,7 @@ def pay(payment_request):
 
     log.info('trying to pay', payment_id=payment_request.id)
 
+    # XXX retry on retriable errors
     tx_id = blockchain.pay_to(payment_request.recipient_address,
                               payment_request.amount,
                               payment_request.app_id,
