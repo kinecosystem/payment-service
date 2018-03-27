@@ -17,6 +17,9 @@ run-prod:
 	# XXX change to gunicorn
 	. ./secrets.sh && python3 main.py
 
+worker-prod:
+	. ./secrets.sh && rq worker --url $$REDIS
+
 install-prod:
 	pipenv run pip freeze > requirements.txt
 	pip3 install requirements.txt
