@@ -1,0 +1,1 @@
+curl -H 'content-type: application/json' -XPOST -d '{"amount": 3, "app_id": "kik", "recipient_address": "GBFJX2MULCIKVRNGFQ2VC6B2Q2JBBWGNZ7YFTRV6VKYRCPEEODDPUFNL", "id": "doody_test", "callback": "http://localhost:5000/status"}' localhost:5000/payments

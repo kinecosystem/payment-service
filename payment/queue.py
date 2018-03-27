@@ -1,39 +1,26 @@
+from rq import Queue
 import requests
-from .utils import lock, retry
 from . import blockchain
-from .models import Payment
-from queue import Queue
-from threading import Thread
-from .log import get as get_log
 from .errors import PaymentNotFoundError
+from .log import get as get_log
+from .models import Payment, PaymentRequest
+from .utils import lock, retry
+from .redis_conn import redis_conn
 
 
+q = Queue(connection=redis_conn)
 log = get_log()
 
 
-class PayQueue(object):
-    def __init__(self, num_workers):
-        self.q = Queue()
-        for i in range(num_workers):
-            t = Thread(target=self.worker)
-            t.daemon = True
-            t.start()
-
-    def put(self, task):
-        self.q.put(task)
-
-    def worker(self):
-        while True:
-            try:
-                item = self.q.get()
-                do_work(item)
-                self.q.task_done()
-            except Exception as e:
-                log.exception('worker failed with: {}'.format(e))
+def enqueue(payment_request):
+    result = q.enqueue(pay_and_callback, payment_request.to_primitive())
+    log.info('enqueue result', result=result, payment_request=payment_request)
 
 
-def do_work(payment_request):
+def pay_and_callback(payment_request):
     """lock, try to pay and callback."""
+    log.info('pay_and_callback recieved', payment_request=payment_request)
+    payment_request = PaymentRequest(payment_request)
     with lock('payment:{}'.format(payment_request.id)):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         payment = pay(payment_request)

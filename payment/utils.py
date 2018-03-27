@@ -1,14 +1,12 @@
 import contextlib
 import time
 from functools import wraps
-from threading import Lock
-
-
-_lock = Lock()
+from .redis_conn import redis_conn
 
 
 @contextlib.contextmanager
 def lock(key):
+    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=10)
     _lock.acquire()
     yield
     _lock.release()
