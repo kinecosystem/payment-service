@@ -114,5 +114,5 @@ class Watcher(ModelWithStr):
 
     @classmethod
     def get_all(cls):
-        return [Watcher(json.loads(w))
-                for w in redis_conn.lrange(cls._key(), 0, -1)]
+        data = redis_conn.lrange(cls._key(), 0, -1)
+        return [Watcher(json.loads(w.decode('utf8'))) for w in data]
