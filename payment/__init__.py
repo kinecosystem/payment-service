@@ -1,15 +1,14 @@
 from flask import Flask, request, jsonify
-from .middleware import handle_errors
-from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from . import blockchain
+from . import watcher as watcher_service
 from .errors import AlreadyExistsError, PaymentNotFoundError
 from .log import init as init_log
-from .queue import PayQueue
-from . import watcher as watcher_service
+from .middleware import handle_errors
+from .models import Payment, WalletRequest, PaymentRequest, Watcher
+from .queue import enqueue
 
 
 app = Flask(__name__)
-pay_queue = PayQueue(2)
 log = init_log()
 watcher_service.init()
 
@@ -44,14 +43,13 @@ def get_payment(payment_id):
 @handle_errors
 def pay():
     payment = PaymentRequest(request.get_json())
-
     try:
         Payment.get(payment.id)
         raise AlreadyExistsError('payment already exists')
     except PaymentNotFoundError:
         pass
     
-    pay_queue.put(payment)
+    enqueue(payment)
     return jsonify(), 201
 
 
@@ -65,3 +63,10 @@ def watch(service_id):
     watcher_service.start_monitor(watcher)
 
     return jsonify(watcher.to_primitive())
+
+
+@app.route('/status', methods=['GET', 'POST'])
+def status():
+    body = request.get_json()
+    log.info('status received', body=body)
+    return jsonify({'status': 'ok'})

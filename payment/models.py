@@ -4,11 +4,10 @@ from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType, ListType
 from .errors import PaymentNotFoundError
+from .redis_conn import redis_conn
 
 
 Memo = namedtuple('Memo', ['app_id', 'payment_id'])
-db = {}
-watcher_db = {}
 
 
 class ModelWithStr(Model):
@@ -53,6 +52,7 @@ class PaymentRequest(ModelWithStr):
 
 
 class Payment(ModelWithStr):
+    PAY_STORE_TIME = 500
     id = StringType()
     app_id = StringType()
     transaction_id = StringType()
@@ -84,21 +84,20 @@ class Payment(ModelWithStr):
         return '1-{}-{}'.format(app_id, payment_id)
 
     @classmethod
-    def get_by_transaction_id(cls, tx_id):
-        for t in db.values():
-            if t.transaction_id == tx_id:
-                return Payment(t)
-        raise PaymentNotFoundError('payment with transaction {} not found'.format(tx_id))
+    def get(cls, payment_id):
+        data = redis_conn.get(cls._key(payment_id))
+        if not data:
+            raise PaymentNotFoundError('payment {} not found'.format(payment_id))
+        return Payment(json.loads(data))
 
     @classmethod
-    def get(cls, payment_id):
-        try:
-            return Payment(db[payment_id])
-        except KeyError:
-            raise PaymentNotFoundError('payment {} not found'.format(payment_id))
+    def _key(cls, id):
+        return 'payment:{}'.format(id)
 
     def save(self):
-        db[self.id] = self.to_primitive()
+        redis_conn.set(self._key(self.id),
+                       json.dumps(self.to_primitive()),
+                       ex=self.PAY_STORE_TIME)
 
 
 class Watcher(ModelWithStr):
@@ -107,16 +106,13 @@ class Watcher(ModelWithStr):
     service_id = StringType()
 
     def save(self):
-        watcher_db[self.service_id] = self
+        redis_conn.lpush(self._key(), json.dumps(self.to_primitive()))
+
+    @classmethod
+    def _key(cls):
+        return 'watchers'
 
     @classmethod
     def get_all(cls):
-        return watcher_db.values()
-
-
-# for testing:
-watcher_db['kik'] = Watcher({
-    'wallet_addresses': ['GC3VEVNMPOIFIQOKUYFROWR6LWQQM57OQSWLLD6TGDIPOA5S6UXQWHVL'],
-    'callback': 'http://localhost:3000/v1/internal/payments',
-    'service_id': 'kik',
-})
+        return [Watcher(json.loads(w))
+                for w in redis_conn.lrange(cls._key(), 0, -1)]
