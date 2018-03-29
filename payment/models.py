@@ -106,13 +106,14 @@ class Watcher(ModelWithStr):
     service_id = StringType()
 
     def save(self):
-        redis_conn.lpush(self._key(), json.dumps(self.to_primitive()))
+        redis_conn.hset(self._key(), self.service_id, json.dumps(self.to_primitive()))
 
     @classmethod
     def _key(cls):
-        return 'watchers'
+        return 'watchers:2'
 
     @classmethod
     def get_all(cls):
-        data = redis_conn.lrange(cls._key(), 0, -1)
+        data = redis_conn.hgetall(cls._key()).values()
+
         return [Watcher(json.loads(w.decode('utf8'))) for w in data]
