@@ -117,3 +117,24 @@ class Watcher(ModelWithStr):
         data = redis_conn.hgetall(cls._key()).values()
 
         return [Watcher(json.loads(w.decode('utf8'))) for w in data]
+
+    @classmethod
+    def get_subscribed(cls, address):
+        """get only watchers who are interested in this address."""
+        return [w for w in cls.get_all()
+                if address in w.wallet_addresses]
+
+
+class CursorManager:
+    @classmethod
+    def save(cls, cursor):
+        redis_conn.set(cls._key(), cursor)
+
+    @classmethod
+    def get(cls):
+        cursor = redis_conn.get(cls._key())
+        return cursor.decode('utf8') if cursor else None
+
+    @classmethod
+    def _key(cls):
+        return 'cursor'
