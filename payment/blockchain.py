@@ -19,6 +19,8 @@ def create_wallet(public_address: str, app_id: str) -> None:
         log.info('wallet already exists - ok', public_address=public_address)
         return
 
+    log.info('creating wallet', public_address=public_address)
+
     memo = '1-{}'.format(app_id)
     initial_xlm_amount = config.STELLAR_INITIAL_XLM_AMOUNT
     try:
@@ -29,7 +31,12 @@ def create_wallet(public_address: str, app_id: str) -> None:
         if e.extras.result_codes.operations[0] == 'op_already_exists':
             log.info('wallet already exists - ok', public_address=public_address)
         else:
+            log.exception('failed creating wallet', error=e, public_address=public_address)
             raise
+    except Exception as e:
+        log.exception('failed creating wallet', error=e, public_address=public_address)
+        raise
+
 
 
 def get_wallet(public_address: str) -> Wallet:
