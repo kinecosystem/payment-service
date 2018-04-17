@@ -53,14 +53,17 @@ def pay():
     return jsonify(), 201
 
 
-@app.route('/watchers/<service_id>', methods=['PUT'])
+@app.route('/watchers/<service_id>', methods=['PUT', 'POST'])
 @handle_errors
 def watch(service_id):
     body = request.get_json()
-    body['service_id'] = service_id
-    watcher = Watcher(body)
+    if request.method == 'PUT':
+        body['service_id'] = service_id
+        watcher = Watcher(body)
+    else:
+        watcher = Watcher.get(service_id)
+        watcher.add_addresses(body['wallet_addresses'])
     watcher.save()
-    watcher_service.start_monitor(watcher)
 
     return jsonify(watcher.to_primitive())
 

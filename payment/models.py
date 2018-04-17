@@ -108,6 +108,15 @@ class Watcher(ModelWithStr):
     def save(self):
         redis_conn.hset(self._key(), self.service_id, json.dumps(self.to_primitive()))
 
+    def add_addresses(self, addresses):
+        self.wallet_addresses = list(
+            set(self.wallet_addresses) | set(addresses))
+
+    @classmethod
+    def get(cls, service_id):
+        data = redis_conn.hget(cls._key(), service_id)
+        return Watcher(json.loads(data.decode('utf8')))
+
     @classmethod
     def _key(cls):
         return 'watchers:2'
