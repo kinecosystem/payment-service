@@ -6,12 +6,12 @@
 *This procedure is a work-in-progress and as of now is targeting MacOS machines, sorry others*
 
 
-#### Clone this Repo
+#### Step 1: Clone this Repo
 
-#### Install dependencies
+#### Step 2: Install dependencies
 Change into the Repo's directory and run ```pyenv install``` (Python 3 and pyenv are prerequisites)
 
-#### Install and setup Redis
+#### Step 3: Install and setup Redis
 
 ###### Install Redis
 ```brew install redis```
@@ -22,13 +22,12 @@ Change into the Repo's directory and run ```pyenv install``` (Python 3 and pyenv
 ###### Use launchctl to launch redis:
 ```launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist```
 
-#### Add the local redis endpoint
-While in the repo's directory
+#### Step 4: Add the local redis endpoint
+While in the repo's directory run:
 
 ```echo "export REDIS=redis://localhost:6379/0" >> secrets.sh```
 
-#### Run the service (hopefully)
-
-```make```
+#### Step 5: Run the service (hopefully)
+Run ```make```
 
 
