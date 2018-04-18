@@ -102,3 +102,6 @@ ENV/
 
 .tags
 secrets.sh
+
+# intellij
+.idea
