@@ -49,7 +49,7 @@ def pay(payment_request):
                               payment_request.app_id,
                               payment_request.id)
 
-    log.info('payed transaction', tx_id=tx_id, payment_id=payment_request.id)
+    log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
 
     @retry(10, 3)
     def get_transaction_data(tx_id):
