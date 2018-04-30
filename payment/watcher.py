@@ -41,7 +41,9 @@ def on_transaction(address, tx_data):
 
     @retry(5, 0.2)
     def callback(watcher):
-        return requests.post(watcher.callback, json=payment.to_primitive()).json()
+        res = requests.post(watcher.callback, json=payment.to_primitive())
+        res.raise_for_status()
+        return res.json()
 
     for watcher in Watcher.get_subscribed(address):
         try:

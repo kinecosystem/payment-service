@@ -27,7 +27,9 @@ def pay_and_callback(payment_request):
 
         @retry(5, 0.2)
         def callback(payment, payment_request):
-            return requests.post(payment_request.callback, json=payment.to_primitive()).json()
+            res = requests.post(payment_request.callback, json=payment.to_primitive())
+            res.raise_for_status()
+            return res.json()
 
         response = callback(payment, payment_request)
         log.info('callback response', response=response, payment=payment)
