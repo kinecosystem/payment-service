@@ -2,7 +2,7 @@ import kin
 from . import config
 from .log import get as get_log
 from .models import Payment, Wallet
-from kin import SdkError as KinError
+from kin import AccountExistsError
 
 
 log = get_log()
@@ -27,14 +27,10 @@ def create_wallet(public_address: str, app_id: str) -> None:
         tx_id = kin_sdk.create_account(
             public_address, starting_balance=initial_xlm_amount, memo_text=memo)
         log.info('create wallet transaction', tx_id=tx_id)
-    except KinError as e:
-        if e.extras.result_codes.operations[0] == 'op_already_exists':
-            log.info('wallet already exists - ok', public_address=public_address)
-        else:
-            log.exception('failed creating wallet', error=e, public_address=public_address)
-            raise
+    except AccountExistsError as e:
+        log.info('wallet already exists - ok', public_address=public_address)
     except Exception as e:
-        log.exception('failed creating wallet', error=e, public_address=public_address)
+        log.exception('failed creating wallet', error=str(e), public_address=public_address)
         raise
 
 

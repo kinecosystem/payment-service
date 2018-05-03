@@ -18,7 +18,7 @@ def handle_errors(f):
         except Exception as e:
             if not isinstance(e, BaseError):
                 e = BaseError(str(e))
-            log.exception('uncaught error', error=e, payload=e.to_dict(), message=e.message)
+            log.exception('uncaught error', error=str(e), payload=e.to_dict(), message=e.message)
             return jsonify(e.to_dict()), e.http_code
         finally:
             log.info('response time', path=request.path, time=time.time() - start_time)
