@@ -53,6 +53,13 @@ def on_transaction(address, tx_data):
             log.error('callback failed', error=e, service_id=watcher.service_id, payment=payment)
 
 
+def wrapped_get_transaction_data(tx_id):
+    try:
+        return kin_sdk.get_transaction_data(tx_id)
+    except Exception as e:
+        raise Exception(str(e))  # kinSdk bug causes the process to crash with their exceptions
+
+
 class TransactionFlow():
     """class that saves the last cursor when getting transactions."""
     def __init__(self, cursor):
@@ -78,9 +85,10 @@ class TransactionFlow():
                         and record.get('asset_issuer') == kin_sdk.kin_asset.issuer):
 
                     if record['to'] in addresses:
-                        yield record['to'], kin_sdk.get_transaction_data(record['transaction_hash'])
+                        yield record['to'], wrapped_get_transaction_data(record['transaction_hash'])
                     elif record['from'] in addresses:
-                        yield record['from'], kin_sdk.get_transaction_data(record['transaction_hash'])
+                        yield record['from'], wrapped_get_transaction_data(record['transaction_hash'])
+                    # else - address is not watched
                 self.cursor = record['paging_token']
             records = get_records(self.cursor)
 
