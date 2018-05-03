@@ -3,6 +3,7 @@ from . import config
 from .log import get as get_log
 from .models import Payment, Wallet
 from kin import AccountExistsError
+from .utils import retry
 
 
 log = get_log()
@@ -24,11 +25,14 @@ def create_wallet(public_address: str, app_id: str) -> None:
 
     log.info('creating wallet', public_address=public_address)
 
+    @retry(5, 0.2)
+    def create_account(public_address, starting_balance, memo_text):
+        return kin_sdk.create_account(public_address, starting_balance, memo_text)
+
     memo = '1-{}'.format(app_id)
     initial_xlm_amount = config.STELLAR_INITIAL_XLM_AMOUNT
     try:
-        tx_id = kin_sdk.create_account(
-            public_address, starting_balance=initial_xlm_amount, memo_text=memo)
+        tx_id = create_account(public_address, initial_xlm_amount, memo)
         log.info('create wallet transaction', tx_id=tx_id)
     except AccountExistsError as e:
         log.info('wallet already exists - ok', public_address=public_address)
