@@ -13,7 +13,7 @@ STELLAR_INITIAL_XLM_AMOUNT = 10
 REDIS = os.environ['APP_REDIS']
 APP_NAME = os.environ.get('APP_NAME', 'payment-service')
 
-DEBUG = True
+DEBUG = os.environ.get('APP_DEBUG', 'true').lower() == 'true'
 build = {'commit': os.environ.get('BUILD_COMMIT'),
          'timestamp': os.environ.get('BUILD_TIMESTAMP'),
          'start_time': datetime.utcnow().isoformat()}
