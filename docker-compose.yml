@@ -23,6 +23,8 @@ services:
 
   payment-worker:
     image: kinecosystem/payment-service
+    volumes:
+      - .:/opt/app
     command: pipenv run rq worker --url redis://redis:6379/0
     links:
       - redis

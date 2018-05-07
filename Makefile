@@ -1,9 +1,6 @@
 all:
 	trap 'kill %1' SIGINT; make run & make worker 
 
-up:
-	. ./secrets.sh && docker-compose up
-
 split: 
 	tmux new-session 'make run' \; split-window 'make worker' \;
 
@@ -33,12 +30,16 @@ install-prod:
 revision := $(shell git rev-parse --short HEAD)
 image := "kinecosystem/payment-service"
 
-build:
+build-image:
 	docker build -t ${image} -f Dockerfile \
 		--build-arg BUILD_COMMIT="${revision}" \
 		--build-arg BUILD_TIMESTAMP="$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")" .
 	docker tag ${image} ${image}:${revision}
 
-push:
+push-image:
 	docker push ${image}:latest
 	docker push ${image}:${revision}
+
+up:
+	. ./secrets.sh && docker-compose up
+
