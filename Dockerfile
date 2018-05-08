@@ -1,13 +1,15 @@
 FROM python:3.6-alpine
 
-# install build tools and pipenv
-RUN apk update && apk add --no-cache git build-base
-RUN pip install -U pip pipenv
-
-# copy and install pipfile (requirements)
 WORKDIR /opt/app
+
+# copy pipfile (requirements)
 COPY Pipfile* ./
-RUN pipenv install 
+
+# install build tools and pipenv
+RUN apk add -qU --no-cache -t .fetch-deps git build-base \
+    && pip install -U pip pipenv \
+    && pipenv install \
+    && apk del -q .fetch-deps
 
 # copy the code
 COPY . .
