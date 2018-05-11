@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+
+  generate-funding-address:
+    image: kinecosystem/payment-service
+    command: pipenv run python generate_funding_address.py
+    volumes:
+      - .:/opt/app
+    environment:
+      KIN_FAUCET: http://159.65.84.173:5005
+      XLM_FAUCET: https://friendbot.stellar.org
+      OUTPUT_DIR: ./secrets

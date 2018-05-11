@@ -1,4 +1,4 @@
 from payment import app
 import os
 
-app.run(port=int(os.environ.get('PAYMENT_PORT', 3000)))
+app.run(host=os.environ.get('APP_HOST', '127.0.0.1'), port=int(os.environ.get('APP_PORT', 3000)))

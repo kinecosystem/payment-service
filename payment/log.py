@@ -15,7 +15,7 @@ from structlog.threadlocal import wrap_dict
 from . import config
 
 
-LOG_LEVEL_PROD = logging.DEBUG
+LOG_LEVEL_PROD = logging.INFO
 LOG_LEVEL_DEBUG = logging.DEBUG
 
 

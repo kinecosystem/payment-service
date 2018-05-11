@@ -1,0 +1,12 @@
+examples/
+.git*
+.idea/
+.tags
+*/*.pyc
+*/*/*.pyc
+*/*/*/*.pyc
+__pycache__/
+Dockerfile
+Makefile
+docker-compose.yml
+secrets.sh

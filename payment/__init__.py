@@ -6,6 +6,7 @@ from .log import init as init_log
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from .queue import enqueue
+from . import config
 
 
 app = Flask(__name__)
@@ -72,4 +73,8 @@ def watch(service_id):
 def status():
     body = request.get_json()
     log.info('status received', body=body)
-    return jsonify({'status': 'ok'})
+    return jsonify({'app_name': config.APP_NAME,
+                    'status': 'ok',
+                    'start_time': config.build['start_time'],
+                    'build': {'timestamp': config.build['timestamp'],
+                              'commit': config.build['commit']}})
