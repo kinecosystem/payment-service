@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from . import blockchain
-from . import watcher as watcher_service
+from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError
 from .log import init as init_log
 from .middleware import handle_errors
@@ -11,7 +11,6 @@ from . import config
 
 app = Flask(__name__)
 log = init_log()
-watcher_service.init()
 
 
 @app.route('/wallets', methods=['POST'])
@@ -31,6 +30,19 @@ def create_wallet():
 def get_wallet(wallet_address):
     w = blockchain.get_wallet(wallet_address)
     return jsonify(w.to_primitive())
+
+
+@app.route('/wallets/<wallet_address>/payments', methods=['GET'])
+@handle_errors
+def get_wallet_payments(wallet_address):
+    payments = []
+    flow = TransactionFlow(cursor=0)
+    for tx in flow.get_address_transactions(wallet_address):
+        payment = blockchain.try_parse_payment(tx)
+        if payment:
+            payments.append(payment.to_primitive())
+
+    return jsonify({'payments': payments})
 
 
 @app.route('/payments/<payment_id>', methods=['GET'])
