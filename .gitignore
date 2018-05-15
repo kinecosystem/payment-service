@@ -101,7 +101,7 @@ ENV/
 .mypy_cache/
 
 .tags
-secrets.sh
+secrets/
 
 # intellij
 .idea
