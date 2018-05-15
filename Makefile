@@ -18,7 +18,7 @@ run-prod:
 	. ./secrets/.secrets && python3 main.py
 
 worker-prod:
-	. ./secrets/.secrets && rq worker --url $$REDIS
+	. ./secrets/.secrets && rq worker --url $$APP_REDIS
 
 install-prod:
 	pipenv run pip freeze > requirements.txt
