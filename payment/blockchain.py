@@ -36,17 +36,10 @@ def create_wallet(public_address: str, app_id: str) -> None:
         log.info('create wallet transaction', tx_id=tx_id)
     except AccountExistsError as e:
         log.info('wallet already exists - ok', public_address=public_address)
-    except Exception as e:
-        log.exception('failed creating wallet', error=str(e), public_address=public_address)
-        raise Exception(str(e))  # kinSdk bug causes the process to crash with their exceptions
-
 
 
 def get_wallet(public_address: str) -> Wallet:
-    try:
-        data = kin_sdk.get_account_data(public_address)
-    except Exception as e:
-        raise Exception(str(e))  # kinSdk bug causes the process to crash with their exceptions
+    data = kin_sdk.get_account_data(public_address)
     return Wallet.from_blockchain(data, kin_sdk.kin_asset)
 
 
@@ -54,18 +47,12 @@ def pay_to(public_address: str, amount: int, app_id: str, payment_id: str) -> Pa
     """send kins to an address."""
     log.info('sending kin to', address=public_address)
     memo = Payment.create_memo(app_id, payment_id)
-    try:
-        tx_id = kin_sdk.send_kin(public_address, amount, memo_text=memo)
-    except Exception as e:
-        raise Exception(str(e))  # kinSdk bug causes the process to crash with their exceptions
+    tx_id = kin_sdk.send_kin(public_address, amount, memo_text=memo)
     return tx_id
 
 
 def get_transaction_data(tx_id):
-    try:
-        data = kin_sdk.get_transaction_data(tx_id)
-    except Exception as e:
-        raise Exception(str(e))  # kinSdk bug causes the process to crash with their exceptions
+    data = kin_sdk.get_transaction_data(tx_id)
     return Payment.from_blockchain(data)
 
 

@@ -5,11 +5,7 @@ from .log import get as get_log
 log = get_log()
 
 
-def wrapped_get_transaction_data(tx_id):
-    try:
-        return kin_sdk.get_transaction_data(tx_id)
-    except Exception as e:
-        raise Exception(str(e))  # kinSdk bug causes the process to crash with their exceptions
+
 
 
 class TransactionFlow():
@@ -43,7 +39,7 @@ class TransactionFlow():
             return records
 
         for record in self._yield_transactions(get_address_records):
-            yield wrapped_get_transaction_data(record['transaction_hash'])
+            yield kin_sdk.get_transaction_data(record['transaction_hash'])
 
     def get_transactions(self, addresses):
         """get KIN payment transactions for given addresses."""
@@ -59,7 +55,7 @@ class TransactionFlow():
 
         for record in self._yield_transactions(get_all_records):
             if record['to'] in addresses:
-                yield record['to'], wrapped_get_transaction_data(record['transaction_hash'])
+                yield record['to'], kin_sdk.get_transaction_data(record['transaction_hash'])
             elif record['from'] in addresses:
-                yield record['from'], wrapped_get_transaction_data(record['transaction_hash'])
+                yield record['from'], kin_sdk.get_transaction_data(record['transaction_hash'])
             # else - address is not watched
