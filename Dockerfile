@@ -22,4 +22,4 @@ ENV BUILD_COMMIT $BUILD_COMMIT
 ENV BUILD_TIMESTAMP $BUILD_TIMESTAMP
 
 # run the api server
-CMD [ "pipenv", "run", "python", "main.py" ]
+CMD pipenv run gunicorn -b $APP_HOST:$APP_PORT payment:app
