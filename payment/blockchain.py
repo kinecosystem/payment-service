@@ -4,14 +4,28 @@ from .log import get as get_log
 from .models import Payment, Wallet
 from kin import AccountExistsError
 from .utils import retry
+import stellar_base
 
 
-log = get_log()
+def _get_network_name():
+    """hack: monkeypatch stellar_base to support private network."""
+    if config.STELLAR_NETWORK in ['PUBLIC', 'TESTNET']:
+        return config.STELLAR_NETWORK
+    else:
+        PRIVATE = 'PRIVATE'
+        # register the private network with the given passphrase
+        stellar_base.network.NETWORKS[PRIVATE] = config.STELLAR_NETWORK
+        return PRIVATE
+
+
 kin_sdk = kin.SDK(
     secret_key=config.STELLAR_BASE_SEED,
     horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-    network=config.STELLAR_NETWORK,
-    channel_secret_keys=config.STELLAR_CHANNEL_SEEDS)
+    network=_get_network_name(),
+    channel_secret_keys=config.STELLAR_CHANNEL_SEEDS,
+    kin_asset=stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME, config.STELLAR_KIN_ISSUER_ADDRESS),
+)
+log = get_log()
 
 
 def create_wallet(public_address: str, app_id: str) -> None:

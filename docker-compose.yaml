@@ -20,6 +20,10 @@ services:
       STELLAR_CHANNEL_SEEDS: ${STELLAR_CHANNEL_SEEDS}
       STELLAR_BASE_SEED: ${STELLAR_BASE_SEED}
       STELLAR_ADDRESS: ${STELLAR_ADDRESS}
+      STELLAR_HORIZON_URL: 'https://horizon-kik.kininfrastructure.com'
+      STELLAR_NETWORK: 'private testnet'
+      STELLAR_KIN_ISSUER_ADDRESS: 'GBQ3DQOA7NF52FVV7ES3CR3ZMHUEY4LTHDAQKDTO6S546JCLFPEQGCPK'
+      STELLAR_KIN_TOKEN_NAME: 'KIN'
 
   payment-worker:
     image: kinecosystem/payment-service
