@@ -1,16 +1,16 @@
+from . import config
+from .log import init as init_log
+log = init_log()
 from flask import Flask, request, jsonify
 from . import blockchain
 from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError
-from .log import init as init_log
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from .queue import enqueue
-from . import config
 
 
 app = Flask(__name__)
-log = init_log()
 
 
 @app.route('/wallets', methods=['POST'])
