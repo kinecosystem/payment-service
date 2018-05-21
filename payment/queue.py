@@ -21,7 +21,7 @@ def pay_and_callback(payment_request):
     """lock, try to pay and callback."""
     log.info('pay_and_callback recieved', payment_request=payment_request)
     payment_request = PaymentRequest(payment_request)
-    with lock('payment:{}'.format(payment_request.id)):
+    with lock(redis_conn, 'payment:{}'.format(payment_request.id)):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         payment = pay(payment_request)
 

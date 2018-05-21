@@ -3,28 +3,17 @@ from . import config
 from .log import get as get_log
 from .models import Payment, Wallet
 from kin import AccountExistsError
-from .utils import retry
+from .utils import retry, get_network_name
 import stellar_base
-
-
-def _get_network_name():
-    """hack: monkeypatch stellar_base to support private network."""
-    if config.STELLAR_NETWORK in ['PUBLIC', 'TESTNET']:
-        return config.STELLAR_NETWORK
-    else:
-        PRIVATE = 'PRIVATE'
-        # register the private network with the given passphrase
-        stellar_base.network.NETWORKS[PRIVATE] = config.STELLAR_NETWORK
-        return PRIVATE
 
 
 kin_sdk = kin.SDK(
     secret_key=config.STELLAR_BASE_SEED,
     horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-    network=_get_network_name(),
+    network=get_network_name(config.STELLAR_NETWORK),
     channel_secret_keys=config.STELLAR_CHANNEL_SEEDS,
-    kin_asset=stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME, config.STELLAR_KIN_ISSUER_ADDRESS),
-)
+    kin_asset=stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME,
+                                       config.STELLAR_KIN_ISSUER_ADDRESS))
 log = get_log()
 
 
@@ -68,15 +57,3 @@ def pay_to(public_address: str, amount: int, app_id: str, payment_id: str) -> Pa
 def get_transaction_data(tx_id):
     data = kin_sdk.get_transaction_data(tx_id)
     return Payment.from_blockchain(data)
-
-
-def try_parse_payment(tx_data):
-    """try to parse payment from given tx_data. return None when failed."""
-    try:
-        return Payment.from_blockchain(tx_data)
-    except ValueError as e:  # XXX memo not in right format - set a custom parsingMemoError
-        log.exception('failed to parse payment', tx_data=tx_data, error=e)
-        return
-    except Exception as e:
-        log.exception('failed to parse payment', tx_data=tx_data, error=e)
-        return

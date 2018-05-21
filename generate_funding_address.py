@@ -4,6 +4,7 @@ from functools import wraps
 import kin
 import requests
 from kin.sdk import Keypair
+from payment.utils import retry, get_network_name
 import stellar_base
 
 
@@ -18,39 +19,12 @@ class config:
     AMOUNT = 100000
 
 
-def retry(times, delay=0.3):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            for i in range(times):
-                try:
-                    return func(*args, **kwargs)
-                except Exception:
-                    if i == times - 1:
-                        raise
-                    else:
-                        time.sleep(delay)
-        return wrapper
-    return decorator
-
-
-def _get_network_name():
-    """hack: monkeypatch stellar_base to support private network."""
-    if config.STELLAR_NETWORK in ['PUBLIC', 'TESTNET']:
-        return config.STELLAR_NETWORK
-    else:
-        PRIVATE = 'PRIVATE'
-        # register the private network with the given passphrase
-        stellar_base.network.NETWORKS[PRIVATE] = config.STELLAR_NETWORK
-        return PRIVATE
-
-
 @retry(5, 1)
 def trust_kin(private_seed):
     kin_sdk = kin.SDK(
         secret_key=private_seed,
         horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-        network=_get_network_name(),
+        network=get_network_name(config.STELLAR_NETWORK),
         kin_asset=kin.Asset.native())
     kin_asset = stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME, config.STELLAR_KIN_ISSUER_ADDRESS)
     kin_sdk._trust_asset(kin_asset)
