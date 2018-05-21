@@ -24,6 +24,7 @@ services:
       STELLAR_NETWORK: 'private testnet'
       STELLAR_KIN_ISSUER_ADDRESS: 'GBQ3DQOA7NF52FVV7ES3CR3ZMHUEY4LTHDAQKDTO6S546JCLFPEQGCPK'
       STELLAR_KIN_TOKEN_NAME: 'KIN'
+      STELLAR_INITIAL_XLM_AMOUNT: 1
 
   payment-worker:
     image: kinecosystem/payment-service
