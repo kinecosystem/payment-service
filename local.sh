@@ -7,4 +7,4 @@ export \
     STELLAR_KIN_TOKEN_NAME='KIN' \
     KIN_FAUCET='http://159.65.84.173:5000' \
     XLM_FAUCET='http://friendbot-kik.kininfrastructure.com' \
-    STELLAR_INITIAL_XLM_AMOUNT=1
+    STELLAR_INITIAL_XLM_AMOUNT=2

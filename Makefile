@@ -40,10 +40,10 @@ push-image:
 	docker push ${image}:${revision}
 
 up:
-	. ./secrets/.secrets && docker-compose up
+	. ./local.sh && . ./secrets/.secrets && docker-compose up
 
 generate-funding-address:
-	docker-compose -f docker-compose.tests.yaml run generate-funding-address
+	. ./local.sh && docker-compose -f docker-compose.tests.yaml run generate-funding-address
 
 
 .PHONY: build-image push-image up generate-funding-address shell run run-prod install-prod
