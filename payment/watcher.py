@@ -1,11 +1,12 @@
 import requests
 import time
 
-from .blockchain import kin_sdk, try_parse_payment
+from .blockchain import kin_sdk
 from .transaction_flow import TransactionFlow
 from .log import get as get_log
-from .models import Watcher, CursorManager
+from .models import Payment, Watcher, CursorManager
 from .utils import retry
+from .errors import ParseError
 import threading
 
 
@@ -47,6 +48,7 @@ def on_payment(address, payment):
 
 
 def worker(stop_event):
+    """Poll blockchain and apply callback on watched address. run until stopped."""
     while not stop_event.is_set():
         time.sleep(SEC_BETWEEN_RUNS)
         try:
@@ -73,7 +75,20 @@ def worker(stop_event):
             log.exception('failed worker iteration', error=e)
 
 
+def try_parse_payment(tx_data):
+    """try to parse payment from given tx_data. return None when failed."""
+    try:
+        return Payment.from_blockchain(tx_data)
+    except ParseError as e:
+        log.exception('failed to parse payment', tx_data=tx_data, error=e)
+        return
+    except Exception as e:
+        log.exception('failed to parse payment', tx_data=tx_data, error=e)
+        return
+
+
 def init():
+    """start a thread to watch the blockchain."""
     log.info('starting watcher service')
     t = threading.Thread(target=worker, args=(stop_event, ))
     t.daemon = True

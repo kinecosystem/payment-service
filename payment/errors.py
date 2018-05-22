@@ -17,3 +17,7 @@ class AlreadyExistsError(BaseError):
 class PaymentNotFoundError(BaseError):
     http_code = 404
     code = 4041
+
+
+class ParseError(ValueError):
+    pass

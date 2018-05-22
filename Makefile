@@ -5,20 +5,20 @@ split:
 	tmux new-session 'make run' \; split-window 'make worker' \;
 
 run:
-	APP_REDIS=redis://localhost:6379/0 APP_PORT=5000 . ./secrets/.secrets && pipenv run python main.py
+	. ./local.sh && . ./secrets/.secrets && pipenv run python main.py
 
 worker:
-	APP_REDIS=redis://localhost:6379/0 . ./secrets/.secrets && pipenv run rq worker
+	. ./local.sh && . ./secrets/.secrets && pipenv run rq worker
 
 shell:
 	. ./secrets/.secrets && pipenv run ipython
 
 run-prod:
 	# XXX change to gunicorn
-	. ./secrets/.secrets && python3 main.py
+	. ./local.sh && . ./secrets/.secrets && python3 main.py
 
 worker-prod:
-	. ./secrets/.secrets && rq worker --url $$APP_REDIS
+	. ./local.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS
 
 install-prod:
 	pipenv run pip freeze > requirements.txt
@@ -40,10 +40,10 @@ push-image:
 	docker push ${image}:${revision}
 
 up:
-	. ./secrets/.secrets && docker-compose up
+	. ./local.sh && . ./secrets/.secrets && docker-compose up
 
 generate-funding-address:
-	docker-compose -f docker-compose.tests.yaml run generate-funding-address
+	. ./local.sh && docker-compose -f docker-compose.tests.yaml run generate-funding-address
 
 
 .PHONY: build-image push-image up generate-funding-address shell run run-prod install-prod
