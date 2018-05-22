@@ -2,20 +2,22 @@ all:
 	trap 'kill %1' SIGINT; make run & make worker 
 
 split: 
-	tmux new-session 'make run' \; split-window 'make worker' \;
+	tmux new-session 'make run' \; split-window 'make worker' \; split-window 'make watcher' \;
 
 run:
-	. ./local.sh && . ./secrets/.secrets && pipenv run python main.py
+	. ./local.sh && . ./secrets/.secrets && pipenv run gunicorn -b localhost:5000 payment.app:app
 
 worker:
 	. ./local.sh && . ./secrets/.secrets && pipenv run rq worker
 
+watcher:
+	. ./local.sh && . ./secrets/.secrets && APP_REDIS=redis://localhost:6379/0 pipenv run python watcher.py
+
 shell:
-	. ./secrets/.secrets && pipenv run ipython
+	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
 
 run-prod:
-	# XXX change to gunicorn
-	. ./local.sh && . ./secrets/.secrets && python3 main.py
+	. ./local.sh && . ./secrets/.secrets && python3 -m gunicorn -b localhost:5000 payment.app:app
 
 worker-prod:
 	. ./local.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS

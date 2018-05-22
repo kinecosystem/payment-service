@@ -19,3 +19,4 @@ requests = "*"
 kin = {git = "https://github.com/kinfoundation/kin-core-python.git", ref = "7e2de18"}
 rq = "*"
 hiredis = "*"
+gunicorn = "*"
