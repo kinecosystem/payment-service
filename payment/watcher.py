@@ -8,8 +8,7 @@ from .log import get as get_log
 from .models import Payment, Watcher, CursorManager
 from .transaction_flow import TransactionFlow
 from .utils import retry
-
-from .influx_statsd import Sample
+from .statsd import statsd
 
 
 stop_event = threading.Event()
@@ -40,18 +39,22 @@ def on_payment(address, payment):
         return res.json()
 
     log.info('got payment', address=address, payment=payment)
-    (Sample('payment_observed', address=address, app_id=payment.app_id)
-     .histogram(payment.amount)
-     .count().send())
+    statsd.increment('payment_observed',
+                     tags=['app_id:%s' % payment.app_id,
+                           'address:%s' % address])
+    statsd.histogram('payment_observed',
+                     payment.amount,
+                     tags=['app_id:%s' % payment.app_id,
+                           'address:%s' % address])
 
     for watcher in Watcher.get_subscribed(address):
         try:
             response = callback(watcher)
             log.info('callback response', response=response, service_id=watcher.service_id, payment=payment)
-            Sample('payment_callback.success', app_id=payment.app_id).count().send()
+            statsd.increment('callback.success', tags=['app_id:%s' % payment.app_id])
         except Exception as e:
             log.error('callback failed', error=e, service_id=watcher.service_id, payment=payment)
-            Sample('payment_callback.failed', app_id=payment.app_id).count().send()
+            statsd.increment('callback.failed', tags=['app_id:%s' % payment.app_id])
 
 
 def get_watching_addresses():
@@ -90,7 +93,7 @@ def worker(stop_event):
             CursorManager.save(flow.cursor)
         except Exception as e:
             log.exception('failed worker iteration', error=e)
-        Sample('payment_worker_beat').count().time(time.time() - start_t).send()
+        statsd.timing('worker_beat', time.time() - start_t)
 
 
 def try_parse_payment(tx_data):

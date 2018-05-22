@@ -20,3 +20,4 @@ kin = {git = "https://github.com/kinecosystem/kin-core-python.git", ref = "7e2de
 rq = "*"
 hiredis = "*"
 gunicorn = "*"
+datadog = "*"

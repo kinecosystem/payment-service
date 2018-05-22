@@ -5,7 +5,7 @@ from .models import Payment, Wallet
 from kin import AccountExistsError
 from .utils import retry, get_network_name
 import stellar_base
-from .influx_statsd import Sample
+from .statsd import statsd
 
 
 kin_sdk = kin.SDK(
@@ -38,7 +38,7 @@ def create_wallet(public_address: str, app_id: str) -> None:
     try:
         tx_id = create_account(public_address, initial_xlm_amount, memo)
         log.info('create wallet transaction', tx_id=tx_id)
-        Sample('payment_wallet.created', app_id=app_id).count().send()
+        statsd.increment('wallet.created', tags=['app_id:%s' % payment.app_id])
     except AccountExistsError as e:
         log.info('wallet already exists - ok', public_address=public_address)
 
