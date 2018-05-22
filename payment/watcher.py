@@ -6,6 +6,7 @@ from .transaction_flow import TransactionFlow
 from .log import get as get_log
 from .models import Payment, Watcher, CursorManager
 from .utils import retry
+from .errors import ParseError
 import threading
 
 
@@ -78,7 +79,7 @@ def try_parse_payment(tx_data):
     """try to parse payment from given tx_data. return None when failed."""
     try:
         return Payment.from_blockchain(tx_data)
-    except ValueError as e:  # XXX memo not in right format - set a custom parsingMemoError
+    except ParseError as e:
         log.exception('failed to parse payment', tx_data=tx_data, error=e)
         return
     except Exception as e:

@@ -3,7 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType, ListType
-from .errors import PaymentNotFoundError
+from .errors import PaymentNotFoundError, ParseError
 from .redis_conn import redis_conn
 
 
@@ -75,8 +75,11 @@ class Payment(ModelWithStr):
 
     @classmethod
     def parse_memo(cls, memo):
-        version, app_id, payment_id = memo.split('-')
-        return Memo(app_id, payment_id)
+        try:
+            version, app_id, payment_id = memo.split('-')
+            return Memo(app_id, payment_id)
+        except Exception:
+            raise ParseError
 
     @classmethod
     def create_memo(cls, app_id, payment_id):
