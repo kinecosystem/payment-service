@@ -25,7 +25,7 @@ class Sample(object):
     def send(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            sock.sendto(self.message, (IP, PORT))
+            sock.sendto(self.message.encode(), (IP, PORT))
         except (socket.error, RuntimeError):
             pass
 
