@@ -1,5 +1,5 @@
 all:
-	trap 'kill %1' SIGINT; make run & make worker 
+	trap 'kill %1; kill %2' SIGINT; make run & make worker & make watcher
 
 split: 
 	tmux new-session 'make run' \; split-window 'make worker' \; split-window 'make watcher' \;

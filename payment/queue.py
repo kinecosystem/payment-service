@@ -6,7 +6,7 @@ from .log import get as get_log
 from .models import Payment, PaymentRequest
 from .utils import lock, retry
 from .redis_conn import redis_conn
-from .influx_statsd import Sample
+from .statsd import statsd
 
 
 q = Queue(connection=redis_conn)
@@ -14,9 +14,11 @@ log = get_log()
 
 
 def enqueue(payment_request):
-    (Sample('payment_transaction.enqueue', app_id=payment_request.app_id)
-     .histogram(payment_request.amount)
-     .count().send())
+    statsd.increment('transaction.enqueue',
+                     tags=['app_id:%s' % payment_request.app_id])
+    statsd.histogram('transaction.enqueue',
+                     payment_request.amount,
+                     tags=['app_id:%s' % payment_request.app_id])
     result = q.enqueue(pay_and_callback, payment_request.to_primitive())
     log.info('enqueue result', result=result, payment_request=payment_request)
 
@@ -56,12 +58,15 @@ def pay(payment_request):
                                   payment_request.app_id,
                                   payment_request.id)
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
-        (Sample('payment_transaction.paid', app_id=payment_request.app_id)
-         .histogram(payment_request.amount)
-         .count().send())
+        statsd.increment('transaction.paid',
+                         tags=['app_id:%s' % payment_request.app_id])
+        statsd.histogram('transaction.paid',
+                         payment_request.amount,
+                         tags=['app_id:%s' % payment_request.app_id])
     except Exception as e:
         log.exception('failed to pay transaction', error=e, tx_id=tx_id, payment_id=payment_request.id)
-        Sample('payment_transaction.failed', app_id=payment_request.app_id).count().send()
+        statsd.increment('transaction.failed',
+                         tags=['app_id:%s' % payment_request.app_id])
 
     @retry(10, 3)
     def get_transaction_data(tx_id):
