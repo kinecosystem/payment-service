@@ -11,7 +11,7 @@ worker:
 	. ./local.sh && . ./secrets/.secrets && pipenv run rq worker
 
 watcher:
-	. ./local.sh && . ./secrets/.secrets && APP_REDIS=redis://localhost:6379/0 pipenv run python watcher.py
+	. ./local.sh && . ./secrets/.secrets && pipenv run python watcher.py
 
 shell:
 	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
@@ -21,6 +21,9 @@ run-prod:
 
 worker-prod:
 	. ./local.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS
+
+watcher-prod:
+	. ./local.sh && . ./secrets/.secrets && python3 watcher.py
 
 install-prod:
 	pipenv run pip freeze > requirements.txt
