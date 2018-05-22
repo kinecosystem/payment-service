@@ -49,7 +49,7 @@ def on_payment(address, payment):
 
 def worker(stop_event):
     """Poll blockchain and apply callback on watched address. run until stopped."""
-    while not stop_event.is_set():
+    while stop_event is None or not stop_event.is_set():
         time.sleep(SEC_BETWEEN_RUNS)
         try:
             # get a dict of address => watchers

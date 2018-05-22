@@ -36,6 +36,16 @@ services:
     environment:
       <<: *app_env_vars
 
+  payment-watcher:
+    image: kinecosystem/payment-service
+    volumes:
+      - .:/opt/app
+    command: pipenv run python watcher.py
+    links:
+      - redis
+    environment:
+      <<: *app_env_vars
+
   redis:
     image: redis
     ports:
