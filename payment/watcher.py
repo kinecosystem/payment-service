@@ -1,13 +1,15 @@
 import requests
+import threading
 import time
 
 from .blockchain import kin_sdk
-from .transaction_flow import TransactionFlow
+from .errors import ParseError
 from .log import get as get_log
 from .models import Payment, Watcher, CursorManager
+from .transaction_flow import TransactionFlow
 from .utils import retry
-from .errors import ParseError
-import threading
+
+from .influx_statsd import Sample
 
 
 stop_event = threading.Event()
@@ -38,27 +40,40 @@ def on_payment(address, payment):
         return res.json()
 
     log.info('got payment', address=address, payment=payment)
+    (Sample('payment_observed', address=address, app_id=payment.app_id)
+     .histogram(payment.amount)
+     .count().send())
 
     for watcher in Watcher.get_subscribed(address):
         try:
             response = callback(watcher)
             log.info('callback response', response=response, service_id=watcher.service_id, payment=payment)
+            Sample('payment_callback.success', app_id=payment.app_id).count().send()
         except Exception as e:
             log.error('callback failed', error=e, service_id=watcher.service_id, payment=payment)
+            Sample('payment_callback.failed', app_id=payment.app_id).count().send()
+
+
+def get_watching_addresses():
+    """
+    get a dict of address => watchers
+    """
+    addresses = {}
+    for watcher in Watcher.get_all():
+        for address in watcher.wallet_addresses:
+            if address not in addresses:
+                addresses[address] = []
+            addresses[address].append(watcher)
+    return addresses
 
 
 def worker(stop_event):
     """Poll blockchain and apply callback on watched address. run until stopped."""
     while stop_event is None or not stop_event.is_set():
         time.sleep(SEC_BETWEEN_RUNS)
+        start_t = time.time()
         try:
-            # get a dict of address => watchers
-            addresses = {}
-            for watcher in Watcher.get_all():
-                for address in watcher.wallet_addresses:
-                    if address not in addresses:
-                        addresses[address] = []
-                    addresses[address].append(watcher)
+            addresses = get_watching_addresses()
 
             cursor = get_last_cursor()
             log.debug('got last cursor %s' % cursor)
@@ -70,9 +85,12 @@ def worker(stop_event):
                     on_payment(address, payment)
                 CursorManager.save(tx['paging_token'])
             log.debug('save last cursor %s' % flow.cursor)
+            # flow.cursor is the last block observed - it might not be a kin payment, 
+            # so the previous .save inside the loop doesnt guarantee avoidance of reprocessing
             CursorManager.save(flow.cursor)
         except Exception as e:
             log.exception('failed worker iteration', error=e)
+        Sample('payment_worker_beat').count().time(time.time() - start_t).send()
 
 
 def try_parse_payment(tx_data):
