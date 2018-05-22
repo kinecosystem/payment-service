@@ -38,7 +38,7 @@ def create_wallet(public_address: str, app_id: str) -> None:
     try:
         tx_id = create_account(public_address, initial_xlm_amount, memo)
         log.info('create wallet transaction', tx_id=tx_id)
-        statsd.increment('wallet.created', tags=['app_id:%s' % payment.app_id])
+        statsd.increment('wallet.created', tags=['app_id:%s' % app_id])
     except AccountExistsError as e:
         log.info('wallet already exists - ok', public_address=public_address)
 
