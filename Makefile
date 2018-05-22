@@ -17,7 +17,7 @@ shell:
 	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
 
 run-prod:
-	. ./local.sh && . ./secrets/.secrets && python3 -m gunicorn -b localhost:5000 payment.app:app
+	. ./local.sh && . ./secrets/.secrets && gunicorn -b localhost:3000 payment.app:app
 
 worker-prod:
 	. ./local.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS
