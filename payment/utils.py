@@ -19,6 +19,7 @@ def retry(times, delay=0.3):
                 try:
                     return func(*args, **kwargs)
                 except Exception:
+                    print('# retry %s: %s' % (func.__name__, i))
                     if i == times - 1:
                         raise
                     else:
