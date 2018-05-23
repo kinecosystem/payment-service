@@ -14,13 +14,21 @@ log = get_log()
 
 
 def enqueue(payment_request):
-    statsd.increment('transaction.enqueue',
-                     tags=['app_id:%s' % payment_request.app_id])
     statsd.histogram('transaction.enqueue',
                      payment_request.amount,
                      tags=['app_id:%s' % payment_request.app_id])
     result = q.enqueue(pay_and_callback, payment_request.to_primitive())
     log.info('enqueue result', result=result, payment_request=payment_request)
+
+
+def enqueue_wallet(wallet_request):
+    statsd.increment('wallet_creation.enqueue',
+                     tags=['app_id:%s' % wallet_request.app_id])
+
+    result = q.enqueue(blockchain.create_wallet,
+                       wallet_request.wallet_address,
+                       wallet_request.app_id)
+    log.info('enqueue result', result=result, wallet_request=wallet_request)
 
 
 def pay_and_callback(payment_request):
@@ -58,8 +66,6 @@ def pay(payment_request):
                                   payment_request.app_id,
                                   payment_request.id)
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
-        statsd.increment('transaction.paid',
-                         tags=['app_id:%s' % payment_request.app_id])
         statsd.histogram('transaction.paid',
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])

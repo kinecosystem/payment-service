@@ -39,9 +39,6 @@ def on_payment(address, payment):
         return res.json()
 
     log.info('got payment', address=address, payment=payment)
-    statsd.increment('payment_observed',
-                     tags=['app_id:%s' % payment.app_id,
-                           'address:%s' % address])
     statsd.histogram('payment_observed',
                      payment.amount,
                      tags=['app_id:%s' % payment.app_id,
