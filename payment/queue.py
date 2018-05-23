@@ -31,6 +31,32 @@ def enqueue_wallet(wallet_request):
     log.info('enqueue result', result=result, wallet_request=wallet_request)
 
 
+def enqueue_callback(callback, payment):
+    statsd.increment('callback.enqueue',
+                     tags=['app_id:%s' % payment.app_id])
+
+    result = q.enqueue(call_callback, payment.to_primitive())
+    log.info('enqueue result', result=result, payment=payment)
+
+
+def call_callback(callback: str, payment_payload: dict):
+    payment = Payment(payment_payload)
+
+    @retry(5, 0.2)
+    def retry_callback(callback, payment):
+        res = requests.post(callback, json=payment.to_primitive())
+        res.raise_for_status()
+        return res.json()
+
+    try:
+        response = retry_callback(callback, payment)
+        log.info('callback response', response=response, payment=payment)
+        statsd.increment('callback.success', tags=['app_id:%s' % payment.app_id])
+    except Exception as e:
+        log.error('callback failed', error=e, payment=payment)
+        statsd.increment('callback.failed', tags=['app_id:%s' % payment.app_id])
+
+
 def pay_and_callback(payment_request):
     """lock, try to pay and callback."""
     log.info('pay_and_callback recieved', payment_request=payment_request)
@@ -38,15 +64,7 @@ def pay_and_callback(payment_request):
     with lock(redis_conn, 'payment:{}'.format(payment_request.id)):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         payment = pay(payment_request)
-
-        @retry(5, 0.2)
-        def callback(payment, payment_request):
-            res = requests.post(payment_request.callback, json=payment.to_primitive())
-            res.raise_for_status()
-            return res.json()
-
-        response = callback(payment, payment_request)
-        log.info('callback response', response=response, payment=payment)
+        call_callback(payment_request.callback, payment.to_primitive())
 
 
 def pay(payment_request):

@@ -1,8 +1,8 @@
-import requests
 import threading
 import time
 
 from .blockchain import kin_sdk
+from .queue import call_callback
 from .errors import ParseError
 from .log import get as get_log
 from .models import Payment, Watcher, CursorManager
@@ -32,12 +32,6 @@ def get_last_cursor():
 
 def on_payment(address, payment):
     """handle a new payment from an address."""
-    @retry(5, 0.2)
-    def callback(watcher):
-        res = requests.post(watcher.callback, json=payment.to_primitive())
-        res.raise_for_status()
-        return res.json()
-
     log.info('got payment', address=address, payment=payment)
     statsd.histogram('payment_observed',
                      payment.amount,
@@ -45,13 +39,7 @@ def on_payment(address, payment):
                            'address:%s' % address])
 
     for watcher in Watcher.get_subscribed(address):
-        try:
-            response = callback(watcher)
-            log.info('callback response', response=response, service_id=watcher.service_id, payment=payment)
-            statsd.increment('callback.success', tags=['app_id:%s' % payment.app_id])
-        except Exception as e:
-            log.error('callback failed', error=e, service_id=watcher.service_id, payment=payment)
-            statsd.increment('callback.failed', tags=['app_id:%s' % payment.app_id])
+        call_callback(watcher.callback, payment.to_primitive())
 
 
 def get_watching_addresses():
