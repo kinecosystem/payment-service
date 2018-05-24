@@ -13,14 +13,48 @@ q = Queue(connection=redis_conn)
 log = get_log()
 
 
-def enqueue(payment_request):
-    statsd.increment('transaction.enqueue',
-                     tags=['app_id:%s' % payment_request.app_id])
+def enqueue_payment(payment_request):
     statsd.histogram('transaction.enqueue',
                      payment_request.amount,
                      tags=['app_id:%s' % payment_request.app_id])
     result = q.enqueue(pay_and_callback, payment_request.to_primitive())
     log.info('enqueue result', result=result, payment_request=payment_request)
+
+
+def enqueue_wallet(wallet_request):
+    statsd.increment('wallet_creation.enqueue',
+                     tags=['app_id:%s' % wallet_request.app_id])
+
+    result = q.enqueue(blockchain.create_wallet,
+                       wallet_request.wallet_address,
+                       wallet_request.app_id)
+    log.info('enqueue result', result=result, wallet_request=wallet_request)
+
+
+def enqueue_callback(callback, payment):
+    statsd.increment('callback.enqueue',
+                     tags=['app_id:%s' % payment.app_id])
+
+    result = q.enqueue(call_callback, callback, payment.to_primitive())
+    log.info('enqueue result', result=result, payment=payment)
+
+
+def call_callback(callback: str, payment_payload: dict):
+    payment = Payment(payment_payload)
+
+    @retry(5, 0.2)
+    def retry_callback(callback, payment):
+        res = requests.post(callback, json=payment.to_primitive())
+        res.raise_for_status()
+        return res.json()
+
+    try:
+        response = retry_callback(callback, payment)
+        log.info('callback response', response=response, payment=payment)
+        statsd.increment('callback.success', tags=['app_id:%s' % payment.app_id])
+    except Exception as e:
+        log.error('callback failed', error=e, payment=payment)
+        statsd.increment('callback.failed', tags=['app_id:%s' % payment.app_id])
 
 
 def pay_and_callback(payment_request):
@@ -30,18 +64,11 @@ def pay_and_callback(payment_request):
     with lock(redis_conn, 'payment:{}'.format(payment_request.id)):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         payment = pay(payment_request)
-
-        @retry(5, 0.2)
-        def callback(payment, payment_request):
-            res = requests.post(payment_request.callback, json=payment.to_primitive())
-            res.raise_for_status()
-            return res.json()
-
-        response = callback(payment, payment_request)
-        log.info('callback response', response=response, payment=payment)
+        enqueue_callback(payment_request.callback, payment)
 
 
 def pay(payment_request):
+    """pays only if not already paid."""
     try:
         payment = Payment.get(payment_request.id)
         log.info('payment is already complete - not double spending', payment=payment)
@@ -58,8 +85,6 @@ def pay(payment_request):
                                   payment_request.app_id,
                                   payment_request.id)
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
-        statsd.increment('transaction.paid',
-                         tags=['app_id:%s' % payment_request.app_id])
         statsd.histogram('transaction.paid',
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])

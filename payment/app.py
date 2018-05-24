@@ -7,7 +7,7 @@ from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
-from .queue import enqueue
+from .queue import enqueue_wallet, enqueue_payment
 
 
 app = Flask(__name__)
@@ -19,8 +19,7 @@ def create_wallet():
     body = WalletRequest(request.get_json())
 
     # wallet creation is idempotent - no locking needed
-    # XXX should be async
-    blockchain.create_wallet(body.wallet_address, body.app_id)
+    enqueue_wallet(body)
 
     return jsonify(), 202
 
@@ -62,7 +61,7 @@ def pay():
     except PaymentNotFoundError:
         pass
     
-    enqueue(payment)
+    enqueue_payment(payment)
     return jsonify(), 201
 
 
