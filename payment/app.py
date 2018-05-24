@@ -7,7 +7,7 @@ from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
-from .queue import enqueue_wallet, enqueue
+from .queue import enqueue_wallet, enqueue_payment
 
 
 app = Flask(__name__)
@@ -61,7 +61,7 @@ def pay():
     except PaymentNotFoundError:
         pass
     
-    enqueue(payment)
+    enqueue_payment(payment)
     return jsonify(), 201
 
 

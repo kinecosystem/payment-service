@@ -13,7 +13,7 @@ q = Queue(connection=redis_conn)
 log = get_log()
 
 
-def enqueue(payment_request):
+def enqueue_payment(payment_request):
     statsd.histogram('transaction.enqueue',
                      payment_request.amount,
                      tags=['app_id:%s' % payment_request.app_id])
