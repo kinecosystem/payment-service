@@ -35,7 +35,7 @@ def enqueue_callback(callback, payment):
     statsd.increment('callback.enqueue',
                      tags=['app_id:%s' % payment.app_id])
 
-    result = q.enqueue(call_callback, payment.to_primitive())
+    result = q.enqueue(call_callback, callback, payment.to_primitive())
     log.info('enqueue result', result=result, payment=payment)
 
 
@@ -64,10 +64,11 @@ def pay_and_callback(payment_request):
     with lock(redis_conn, 'payment:{}'.format(payment_request.id)):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         payment = pay(payment_request)
-        call_callback(payment_request.callback, payment.to_primitive())
+        enqueue_callback(payment_request.callback, payment)
 
 
 def pay(payment_request):
+    """pays only if not already paid."""
     try:
         payment = Payment.get(payment_request.id)
         log.info('payment is already complete - not double spending', payment=payment)
