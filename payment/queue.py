@@ -78,7 +78,7 @@ def pay(payment_request):
 
     log.info('trying to pay', payment_id=payment_request.id)
 
-    # XXX retry on retriable errors
+    # XXX retry on retry-able errors
     try:
         tx_id = blockchain.pay_to(payment_request.recipient_address,
                                   payment_request.amount,
@@ -89,10 +89,12 @@ def pay(payment_request):
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])
     except Exception as e:
-        log.exception('failed to pay transaction', error=e, tx_id=tx_id, payment_id=payment_request.id)
+        log.exception('failed to pay transaction', error=e, payment_id=payment_request.id)
         statsd.increment('transaction.failed',
                          tags=['app_id:%s' % payment_request.app_id])
+        raise
 
+    # cache the payment result / XXX maybe this can be done locally without getting the data from horizon
     @retry(10, 3)
     def get_transaction_data(tx_id):
         return blockchain.get_transaction_data(tx_id)

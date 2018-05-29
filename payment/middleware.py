@@ -12,8 +12,8 @@ def handle_errors(f):
     """Decorate a function to log exceptions it throws."""
     @wraps(f)
     def inner(*args, **kwargs):
+        start_time = time.time()
         try:
-            start_time = time.time()
             return f(*args, **kwargs)
         except Exception as e:
             if not isinstance(e, BaseError):
