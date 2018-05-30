@@ -69,12 +69,15 @@ def pay():
 @handle_errors
 def watch(service_id):
     body = request.get_json()
+    body['service_id'] = service_id
     if request.method == 'PUT':
-        body['service_id'] = service_id
         watcher = Watcher(body)
     else:
         watcher = Watcher.get(service_id)
-        watcher.add_addresses(body['wallet_addresses'])
+        if watcher:
+            watcher.add_addresses(body['wallet_addresses'])
+        else:
+            watcher = Watcher(body)
     watcher.save()
 
     return jsonify(watcher.to_primitive())

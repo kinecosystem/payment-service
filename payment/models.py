@@ -118,6 +118,8 @@ class Watcher(ModelWithStr):
     @classmethod
     def get(cls, service_id):
         data = redis_conn.hget(cls._key(), service_id)
+        if not data:
+            return None
         return Watcher(json.loads(data.decode('utf8')))
 
     @classmethod
