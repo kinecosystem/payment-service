@@ -14,7 +14,7 @@ log = get_log()
 
 
 def enqueue_payment(payment_request):
-    statsd.histogram('transaction.enqueue',
+    statsd.inc_count('transaction.enqueue',
                      payment_request.amount,
                      tags=['app_id:%s' % payment_request.app_id])
     result = q.enqueue(pay_and_callback, payment_request.to_primitive())
@@ -85,7 +85,7 @@ def pay(payment_request):
                                   payment_request.app_id,
                                   payment_request.id)
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
-        statsd.histogram('transaction.paid',
+        statsd.inc_count('transaction.paid',
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])
     except Exception as e:
