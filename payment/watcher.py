@@ -1,7 +1,7 @@
 import threading
 import time
 
-from .blockchain import kin_sdk
+from .blockchain import kin_sdk, get_wallet
 from .queue import enqueue_callback
 from .errors import ParseError
 from .log import get as get_log
@@ -33,7 +33,7 @@ def get_last_cursor():
 def on_payment(address, payment):
     """handle a new payment from an address."""
     log.info('got payment', address=address, payment=payment)
-    statsd.histogram('payment_observed',
+    statsd.inc_count('payment_observed',
                      payment.amount,
                      tags=['app_id:%s' % payment.app_id,
                            'address:%s' % address])
@@ -79,6 +79,17 @@ def worker(stop_event):
         except Exception as e:
             log.exception('failed worker iteration', error=e)
         statsd.timing('worker_beat', time.time() - start_t)
+        report_balance()  # TODO do this in an external process:
+
+
+def report_balance():
+    """report root wallet balance metrics to statsd."""
+    try:
+        wallet = get_wallet(kin_sdk.get_address())
+        statsd.gauge('root_wallet.kin_balance', wallet.kin_balance)
+        statsd.gauge('root_wallet.native_balance', wallet.native_balance)
+    except Exception:
+        pass  # don't fail
 
 
 def try_parse_payment(tx_data):

@@ -42,6 +42,7 @@ def create_wallet(public_address: str, app_id: str) -> None:
     except AccountExistsError as e:
         log.info('wallet already exists - ok', public_address=public_address)
 
+
 def get_wallet(public_address: str) -> Wallet:
     data = kin_sdk.get_account_data(public_address)
     return Wallet.from_blockchain(data, kin_sdk.kin_asset)
