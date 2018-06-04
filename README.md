@@ -1,5 +1,21 @@
 # Kin Ecosystem Payment Service
 
+The payment-service is a service meant to be run internally, i.e. not directly connected to the internet. It provides the functionality to:
+* send KIN payments
+* subscribe on KIN payments sent/received on any given address
+* fund new stellar wallets
+
+The service is initiated with a root wallet account that contains sufficient KIN and XLM. The service is diveded into 3:
+1. Http server for incoming requests
+1. Background worker to process payment requests and perform callbacks
+1. Polling process that listens on the blockchain and sends callbacks on any transaction involving a presubscribed address
+
+The server implements a global lock over payment ids, to prevent double spend in case of race-conditions. The server - worker communication is implemented over redis, using the [rq](http://python-rq.org/) library.
+
+## API
+http://editor.swagger.io/?url=https://raw.githubusercontent.com/kinfoundation/ecosystem-api/master/payment.yaml
+
+## Development
 
 ### Setting up a local development environment
 
@@ -29,5 +45,3 @@ While in the repo's directory run:
 
 #### Step 5: Run the service (hopefully)
 Run ```make```
-
-
