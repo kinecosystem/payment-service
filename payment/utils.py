@@ -30,10 +30,10 @@ def retry(times, delay=0.3):
 
 def get_network_name(network_name):
     """hack: monkeypatch stellar_base to support private network."""
-    if network_name in ['PUBLIC', 'TESTNET']:
+    import stellar_base
+    if network_name in stellar_base.network.NETWORKS:
         return network_name
-    else:
-        import stellar_base
+    else:  # network_name is actually a passphrase
         PRIVATE = 'PRIVATE'
         # register the private network with the given passphrase
         stellar_base.network.NETWORKS[PRIVATE] = network_name
@@ -42,6 +42,6 @@ def get_network_name(network_name):
 
 def get_network_passphrase(network_name):
     import stellar_base
-    if network_name not in ['PUBLIC', 'TESTNET']:
+    if network_name not in stellar_base.network.NETWORKS:
         return network_name 
     return stellar_base.network.NETWORKS[network_name]
