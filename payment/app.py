@@ -8,6 +8,7 @@ from .errors import AlreadyExistsError, PaymentNotFoundError
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from .queue import enqueue_wallet, enqueue_payment
+from .utils import get_network_passphrase
 
 
 app = Flask(__name__)
@@ -83,7 +84,7 @@ def watch(service_id):
     return jsonify(watcher.to_primitive())
 
 
-@app.route('/status', methods=['GET', 'POST'])
+@app.route('/status', methods=['GET'])
 def status():
     body = request.get_json()
     log.info('status received', body=body)
@@ -92,3 +93,12 @@ def status():
                     'start_time': config.build['start_time'],
                     'build': {'timestamp': config.build['timestamp'],
                               'commit': config.build['commit']}})
+
+
+@app.route('/config', methods=['GET'])
+def get_config():
+    return jsonify({'horizon_url': config.STELLAR_HORIZON_URL,
+                    'network_passphrase': get_network_passphrase(config.STELLAR_NETWORK),
+                    'kin_issuer': config.STELLAR_KIN_ISSUER_ADDRESS,
+                    'kin_token': config.STELLAR_KIN_TOKEN_NAME,
+                    })
