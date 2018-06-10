@@ -38,7 +38,7 @@ Change into the Repo's directory and run ```pipenv install``` (Python 3 and pipe
 ###### Use launchctl to launch redis:
 ```launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist```
 
-#### Step 4 create or set the secrets file with wallet data
+#### Step 4: create or set the secrets file with wallet data
 You need to have a stellar account with funds and create a `secrets/.secrets` file locally with the following content:
 ```
 export STELLAR_CHANNEL_SEEDS=SXXX
