@@ -25,7 +25,7 @@ http://editor.swagger.io/?url=https://raw.githubusercontent.com/kinfoundation/ec
 #### Step 1: Clone this Repo
 
 #### Step 2: Install dependencies
-Change into the Repo's directory and run ```pyenv install``` (Python 3 and pyenv are prerequisites)
+Change into the Repo's directory and run ```pipenv install``` (Python 3 and pipenv are prerequisites)
 
 #### Step 3: Install and setup Redis
 
@@ -38,10 +38,43 @@ Change into the Repo's directory and run ```pyenv install``` (Python 3 and pyenv
 ###### Use launchctl to launch redis:
 ```launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist```
 
-#### Step 4: Add the local redis endpoint
-While in the repo's directory run:
-
-```echo "export REDIS=redis://localhost:6379/0" >> secrets.sh```
+#### Step 4 create or set the secrets file with wallet data
+You need to have a stellar account with funds and create a `secrets/.secrets` file locally with the following content:
+```
+export STELLAR_CHANNEL_SEEDS=SXXX
+export STELLAR_BASE_SEED=SXXX
+export STELLAR_ADDRESS=GXXX
+```
 
 #### Step 5: Run the service (hopefully)
-Run ```make```
+Run ```make``` which will run 3 processes:
+* payment-service web
+* worker
+* watcher
+
+## Running in Docker
+To run and test using docker follow the instructions bellow:
+
+#### Setup
+*Download docker + docker-compose for your environment.*
+
+If you **DON'T** have a wallet with XLM and KIN:
+Run the following command to generate a `secrets/.secrets` file with a pre-funded wallet:
+```
+make generate-funding-address
+```
+Note that this command will overwrite any existing file `secrets/.secrets`.
+
+If you have a wallet with XLM and KIN:
+You need to have a stellar account with funds and create a `secrets/.secrets` file locally with the following content:
+```
+export STELLAR_CHANNEL_SEEDS=SXXX
+export STELLAR_BASE_SEED=SXXX
+export STELLAR_ADDRESS=GXXX
+```
+
+#### Run docker servers and system tests
+Run the following command:
+```
+make up  # start all services
+```
