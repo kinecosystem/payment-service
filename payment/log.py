@@ -59,7 +59,7 @@ def init():
         cache_logger_on_first_use=True,
     )
 
-    for logger_name in ['requests', 'statsd', 'amqpstorm']:
+    for logger_name in ['requests', 'statsd', 'amqpstorm', 'datadog.dogstatsd']:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     return get()
