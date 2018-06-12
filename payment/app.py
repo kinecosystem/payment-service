@@ -79,7 +79,9 @@ def watch(service_id):
             watcher.add_addresses(body['wallet_addresses'])
         else:
             watcher = Watcher(body)
+
     watcher.save()
+    log.info('added watcher', watcher=watcher)
 
     return jsonify(watcher.to_primitive())
 

@@ -5,9 +5,6 @@ from .log import get as get_log
 log = get_log()
 
 
-
-
-
 class TransactionFlow():
     """class that saves the last cursor when getting transactions."""
     def __init__(self, cursor):
