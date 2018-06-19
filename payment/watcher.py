@@ -2,7 +2,7 @@ import threading
 import time
 
 from .blockchain import kin_sdk, get_wallet
-from .queue import enqueue_callback
+from .queue import enqueue_payment_callback
 from .errors import ParseError
 from .log import get as get_log
 from .models import Payment, Watcher, CursorManager
@@ -39,7 +39,7 @@ def on_payment(address, payment):
                            'address:%s' % address])
 
     for watcher in Watcher.get_subscribed(address):
-        enqueue_callback(watcher.callback, payment)
+        enqueue_payment_callback(watcher.callback, address, payment)
 
 
 def get_watching_addresses():

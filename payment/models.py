@@ -21,6 +21,8 @@ class ModelWithStr(Model):
 class WalletRequest(ModelWithStr):
     wallet_address = StringType()
     app_id = StringType()
+    id = StringType()
+    callback = StringType()  # a webhook to call when a wallet creation is complete
     # XXX validate should raise 400 error
 
 
@@ -28,6 +30,7 @@ class Wallet(ModelWithStr):
     wallet_address = StringType()
     kin_balance = IntType()
     native_balance = IntType()
+    id = StringType()
 
     @classmethod
     def from_blockchain(cls, data, kin_asset):

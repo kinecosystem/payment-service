@@ -3,9 +3,8 @@ from . import config
 from .log import get as get_log
 from .models import Payment, Wallet
 from kin import AccountExistsError
-from .utils import retry, get_network_name
+from .utils import get_network_name
 import stellar_base
-from .statsd import statsd
 
 
 kin_sdk = kin.SDK(
@@ -21,26 +20,20 @@ log = get_log()
 def create_wallet(public_address: str, app_id: str) -> None:
     """create a wallet."""
     try:
-        if kin_sdk.check_account_exists(public_address):
-            log.info('wallet already exists - ok', public_address=public_address)
-            return
+        account_exists = kin_sdk.check_account_exists(public_address)
     except Exception as e:
         log.info('failed checking wallet state', public_address=public_address)
+    else:
+        if account_exists:
+            raise AccountExistsError
 
     log.info('creating wallet', public_address=public_address)
 
-    @retry(5, 0.2)
-    def create_account(public_address, starting_balance, memo_text):
-        return kin_sdk.create_account(public_address, starting_balance, memo_text)
-
     memo = '1-{}'.format(app_id)
     initial_xlm_amount = config.STELLAR_INITIAL_XLM_AMOUNT
-    try:
-        tx_id = create_account(public_address, initial_xlm_amount, memo)
-        log.info('create wallet transaction', tx_id=tx_id)
-        statsd.increment('wallet.created', tags=['app_id:%s' % app_id])
-    except AccountExistsError as e:
-        log.info('wallet already exists - ok', public_address=public_address)
+    tx_id = kin_sdk.create_account(public_address, initial_xlm_amount, memo)
+    log.info('create wallet transaction', tx_id=tx_id)
+    return tx_id
 
 
 def get_wallet(public_address: str) -> Wallet:

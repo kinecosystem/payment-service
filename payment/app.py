@@ -1,5 +1,6 @@
 from . import config
 from .log import init as init_log
+
 log = init_log()
 from flask import Flask, request, jsonify
 from . import blockchain
@@ -7,9 +8,8 @@ from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
-from .queue import enqueue_wallet, enqueue_payment
+from .queue import enqueue_create_wallet, enqueue_send_payment
 from .utils import get_network_passphrase
-
 
 app = Flask(__name__)
 
@@ -20,7 +20,7 @@ def create_wallet():
     body = WalletRequest(request.get_json())
 
     # wallet creation is idempotent - no locking needed
-    enqueue_wallet(body)
+    enqueue_create_wallet(body)
 
     return jsonify(), 202
 
@@ -61,8 +61,8 @@ def pay():
         raise AlreadyExistsError('payment already exists')
     except PaymentNotFoundError:
         pass
-    
-    enqueue_payment(payment)
+
+    enqueue_send_payment(payment)
     return jsonify(), 201
 
 
