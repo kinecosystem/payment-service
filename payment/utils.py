@@ -7,7 +7,7 @@ import logging
 
 @contextlib.contextmanager
 def lock(redis_conn, key):
-    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=60)
+    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=120)
     _lock.acquire()
     yield
     try:
