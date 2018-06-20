@@ -1,4 +1,4 @@
-import typing
+import kin
 from rq import Queue
 import requests
 from . import blockchain
@@ -121,8 +121,10 @@ def pay_and_callback(payment_request: dict):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         try:
             payment = pay(payment_request)
+        except kin.AccountNotActivatedError:
+            enqueue_payment_failed_callback(payment_request, "no_trustline")
         except Exception as e:
-            enqueue_payment_failed_callback(payment_request, e)
+            enqueue_payment_failed_callback(payment_request, str(e))
         else:
             enqueue_payment_callback(payment_request.callback, payment.sender_address, payment)
 
@@ -130,8 +132,6 @@ def pay_and_callback(payment_request: dict):
 def create_wallet_and_callback(wallet_request: dict):
     log.info('pay_and_callback recieved', wallet_request=wallet_request)
     wallet_request = WalletRequest(wallet_request)
-
-    log.info('wallet already exists - ok', public_address=wallet_request.wallet_address)
 
     @retry(5, 0.2)
     def create_wallet(wallet_request):
@@ -143,9 +143,16 @@ def create_wallet_and_callback(wallet_request: dict):
 
     try:
         create_wallet(wallet_request)
+
+    except kin.AccountExistsError as e:
+        statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
+        log.info('wallet already exists - ok', public_address=wallet_request.wallet_address)
+        enqueue_wallet_failed_callback(wallet_request, str(e))
+
     except Exception as e:
         statsd.increment('wallet.failed', tags=['app_id:%s' % wallet_request.app_id])
         enqueue_wallet_failed_callback(wallet_request, str(e))
+
     else:
         statsd.increment('wallet.created', tags=['app_id:%s' % wallet_request.app_id])
         wallet = get_wallet(wallet_request.wallet_address)

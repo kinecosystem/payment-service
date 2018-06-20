@@ -11,6 +11,7 @@ from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from .queue import enqueue_create_wallet, enqueue_send_payment
 from .utils import get_network_passphrase
 
+
 app = Flask(__name__)
 
 
