@@ -122,7 +122,7 @@ def pay_and_callback(payment_request: dict):
         try:
             payment = pay(payment_request)
         except kin.AccountNotActivatedError:
-            enqueue_payment_failed_callback(payment_request, "no_trustline")
+            enqueue_payment_failed_callback(payment_request, "no trustline")
         except Exception as e:
             enqueue_payment_failed_callback(payment_request, str(e))
         else:
@@ -147,7 +147,7 @@ def create_wallet_and_callback(wallet_request: dict):
     except kin.AccountExistsError as e:
         statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
         log.info('wallet already exists - ok', public_address=wallet_request.wallet_address)
-        enqueue_wallet_failed_callback(wallet_request, str(e))
+        enqueue_wallet_failed_callback(wallet_request, "account exists")
 
     except Exception as e:
         statsd.increment('wallet.failed', tags=['app_id:%s' % wallet_request.app_id])

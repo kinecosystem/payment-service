@@ -1,15 +1,19 @@
 import contextlib
 import time
 from functools import wraps
+import redis
+import logging
 
 
 @contextlib.contextmanager
 def lock(redis_conn, key):
-    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=10)
+    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=60)
     _lock.acquire()
     yield
-    _lock.release()
-
+    try:
+        _lock.release()
+    except redis.exceptions.LockError:
+        logging.error("failed to release lock")
 
 def retry(times, delay=0.3):
     def decorator(func):
