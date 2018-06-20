@@ -46,10 +46,10 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
     log.info('enqueue result', result=result, value=value)
 
 
-def enqueue_wallet_callback(callback: str, value: Wallet):
+def enqueue_wallet_callback(wallet_request: WalletRequest, value: Wallet):
     __enqueue_callback(
-        callback=callback,
-        app_id=value.app_id,
+        callback=wallet_request.callback,
+        app_id=wallet_request.app_id,
         objekt='wallet',
         state='success',
         action='create',
@@ -157,7 +157,7 @@ def create_wallet_and_callback(wallet_request: dict):
         statsd.increment('wallet.created', tags=['app_id:%s' % wallet_request.app_id])
         wallet = get_wallet(wallet_request.wallet_address)
         wallet.id = wallet_request.id  # XXX id is required in webhook
-        enqueue_wallet_callback(wallet_request.callback, wallet)
+        enqueue_wallet_callback(wallet_request, wallet)
 
 
 def pay(payment_request: PaymentRequest):
