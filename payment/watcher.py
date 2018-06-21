@@ -1,7 +1,7 @@
 import threading
 import time
 
-from .blockchain import kin_sdk, get_wallet
+from .blockchain import kin_sdk, get_wallet, try_parse_payment
 from .queue import enqueue_payment_callback
 from .errors import ParseError
 from .log import get as get_log
@@ -90,18 +90,6 @@ def report_balance():
         statsd.gauge('root_wallet.native_balance', wallet.native_balance)
     except Exception:
         pass  # don't fail
-
-
-def try_parse_payment(tx_data):
-    """try to parse payment from given tx_data. return None when failed."""
-    try:
-        return Payment.from_blockchain(tx_data)
-    except ParseError as e:
-        log.exception('failed to parse payment', tx_data=tx_data, error=e)
-        return
-    except Exception as e:
-        log.exception('failed to parse payment', tx_data=tx_data, error=e)
-        return
 
 
 def init():

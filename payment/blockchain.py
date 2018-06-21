@@ -52,3 +52,15 @@ def pay_to(public_address: str, amount: int, app_id: str, payment_id: str) -> Pa
 def get_transaction_data(tx_id):
     data = kin_sdk.get_transaction_data(tx_id)
     return Payment.from_blockchain(data)
+
+
+def try_parse_payment(tx_data):
+    """try to parse payment from given tx_data. return None when failed."""
+    try:
+        return Payment.from_blockchain(tx_data)
+    except ParseError as e:
+        log.exception('failed to parse payment', tx_data=tx_data, error=e)
+        return
+    except Exception as e:
+        log.exception('failed to parse payment', tx_data=tx_data, error=e)
+        return
