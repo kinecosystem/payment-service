@@ -4,6 +4,7 @@ from .log import get as get_log
 from .models import Payment, Wallet
 from kin import AccountExistsError
 from .utils import get_network_name
+from .errors import ParseError
 import stellar_base
 
 
