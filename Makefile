@@ -17,13 +17,13 @@ shell:
 	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
 
 run-prod:
-	. ./local.sh && . ./secrets/.secrets && gunicorn -b localhost:3000 payment.app:app
+	. ./prod.sh && . ./secrets/.secrets && gunicorn -b localhost:3000 payment.app:app
 
 worker-prod:
-	. ./local.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS
+	. ./prod.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS
 
 watcher-prod:
-	. ./local.sh && . ./secrets/.secrets && python3 watcher.py
+	. ./prod.sh && . ./secrets/.secrets && python3 watcher.py
 
 install-prod:
 	pipenv run pip freeze > requirements.txt
