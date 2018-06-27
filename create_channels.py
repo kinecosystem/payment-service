@@ -1,3 +1,4 @@
+import os
 import sys
 from payment.blockchain import kin_sdk
 from payment import config
@@ -8,7 +9,7 @@ from kin import AccountExistsError
 
 INITIAL_XLM_AMOUNT = 5
 NUM_CHANNELS = 4
-HD_SALT = b'rounds'
+HD_SALT = os.environ['APP_HD_SALT']
 
 
 def _generate_key(idx):
