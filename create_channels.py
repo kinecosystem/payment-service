@@ -9,7 +9,7 @@ from kin import AccountExistsError
 
 INITIAL_XLM_AMOUNT = 5
 NUM_CHANNELS = 4
-HD_SALT = os.environ['APP_HD_SALT']
+HD_SALT = os.environ['APP_HD_SALT'].encode()
 
 
 def _generate_key(idx):
