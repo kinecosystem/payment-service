@@ -2,9 +2,9 @@ import kin
 from . import config
 from .log import get as get_log
 from .models import Payment, Wallet
-from kin import AccountExistsError
+from kin import AccountExistsError, AccountNotFoundError
 from .utils import get_network_name
-from .errors import ParseError
+from .errors import ParseError, WalletNotFoundError
 import stellar_base
 
 
@@ -38,8 +38,11 @@ def create_wallet(public_address: str, app_id: str) -> None:
 
 
 def get_wallet(public_address: str) -> Wallet:
-    data = kin_sdk.get_account_data(public_address)
-    return Wallet.from_blockchain(data, kin_sdk.kin_asset)
+    try:
+        data = kin_sdk.get_account_data(public_address)
+        return Wallet.from_blockchain(data, kin_sdk.kin_asset)
+    except AccountNotFoundError:
+        raise WalletNotFoundError('wallet %s not found' % public_address)
 
 
 def pay_to(public_address: str, amount: int, app_id: str, payment_id: str) -> Payment:

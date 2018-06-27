@@ -19,5 +19,10 @@ class PaymentNotFoundError(BaseError):
     code = 4041
 
 
+class WalletNotFoundError(BaseError):
+    http_code = 404
+    code = 4042
+
+
 class ParseError(ValueError):
     pass

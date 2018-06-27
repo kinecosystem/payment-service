@@ -36,11 +36,12 @@ class Wallet(ModelWithStr):
     def from_blockchain(cls, data, kin_asset):
         wallet = Wallet()
         wallet.wallet_address = data.id
-        wallet.kin_balance = int(next(
+        kin_balance = next(
             (coin.balance for coin in data.balances
              if coin.asset_code == kin_asset.code
-             and coin.asset_issuer == kin_asset.issuer), 0))
-        wallet.native_balance = int(next(
+             and coin.asset_issuer == kin_asset.issuer), None)
+        wallet.kin_balance = int(kin_balance) if kin_balance else None
+        wallet.native_balance = float(next(
             (coin.balance for coin in data.balances
              if coin.asset_type == 'native'), 0))
         return wallet
