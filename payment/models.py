@@ -40,7 +40,7 @@ class Wallet(ModelWithStr):
             (coin.balance for coin in data.balances
              if coin.asset_code == kin_asset.code
              and coin.asset_issuer == kin_asset.issuer), None)
-        wallet.kin_balance = int(kin_balance) if kin_balance else None
+        wallet.kin_balance = None if kin_balance is None else int(kin_balance)
         wallet.native_balance = float(next(
             (coin.balance for coin in data.balances
              if coin.asset_type == 'native'), 0))
