@@ -3,18 +3,30 @@ from . import config
 from .log import get as get_log
 from .models import Payment, Wallet
 from kin import AccountExistsError, AccountNotFoundError
+from kin.sdk import Keypair
 from .utils import get_network_name
 from .errors import ParseError, WalletNotFoundError
 import stellar_base
 
 
-kin_sdk = kin.SDK(
-    secret_key=config.STELLAR_BASE_SEED,
-    horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-    network=get_network_name(config.STELLAR_NETWORK),
-    channel_secret_keys=config.STELLAR_CHANNEL_SEEDS,
-    kin_asset=stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME,
-                                       config.STELLAR_KIN_ISSUER_ADDRESS))
+def init():
+    kin_sdk = kin.SDK(
+        secret_key=config.STELLAR_BASE_SEED,
+        horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
+        network=get_network_name(config.STELLAR_NETWORK),
+        channel_secret_keys=config.STELLAR_CHANNEL_SEEDS,
+        kin_asset=stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME,
+                                           config.STELLAR_KIN_ISSUER_ADDRESS))
+
+    def seed_to_address(seed):
+        return Keypair.from_seed(seed).address().decode()
+
+    kin_sdk.root_wallet_address = seed_to_address(config.STELLAR_BASE_SEED)
+    kin_sdk.channel_wallet_addresses = [seed_to_address(ch_seed) for ch_seed in config.STELLAR_CHANNEL_SEEDS]
+    return kin_sdk
+
+
+kin_sdk = init()
 log = get_log()
 
 

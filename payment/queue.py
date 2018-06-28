@@ -9,6 +9,7 @@ from .utils import lock, retry
 from .redis_conn import redis_conn
 from .statsd import statsd
 
+
 q = Queue(connection=redis_conn)
 log = get_log()
 
@@ -130,10 +131,10 @@ def pay_and_callback(payment_request: dict):
 
 
 def create_wallet_and_callback(wallet_request: dict):
-    log.info('pay_and_callback recieved', wallet_request=wallet_request)
+    log.info('create_wallet_and_callback recieved', wallet_request=wallet_request)
     wallet_request = WalletRequest(wallet_request)
 
-    @retry(5, 0.2)
+    @retry(5, 0.2, ignore=[kin.AccountExistsError])
     def create_wallet(wallet_request):
         return blockchain.create_wallet(wallet_request.wallet_address, wallet_request.app_id)
 

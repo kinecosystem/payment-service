@@ -8,7 +8,7 @@ run:
 	. ./local.sh && . ./secrets/.secrets && pipenv run gunicorn -b localhost:5000 payment.app:app
 
 worker:
-	. ./local.sh && . ./secrets/.secrets && pipenv run rq worker
+	. ./local.sh && . ./secrets/.secrets && pipenv run python worker.py
 
 watcher:
 	. ./local.sh && . ./secrets/.secrets && pipenv run python watcher.py
@@ -20,7 +20,7 @@ run-prod:
 	. ./prod.sh && . ./secrets/.secrets && gunicorn -b localhost:3000 payment.app:app
 
 worker-prod:
-	. ./prod.sh && . ./secrets/.secrets && rq worker --url $$APP_REDIS
+	. ./prod.sh && . ./secrets/.secrets && python3 worker.py
 
 watcher-prod:
 	. ./prod.sh && . ./secrets/.secrets && python3 watcher.py

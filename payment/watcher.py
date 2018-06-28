@@ -57,6 +57,7 @@ def get_watching_addresses():
 
 def worker(stop_event):
     """Poll blockchain and apply callback on watched address. run until stopped."""
+    cursor = 0
     while stop_event is None or not stop_event.is_set():
         time.sleep(SEC_BETWEEN_RUNS)
         start_t = time.time()
@@ -71,23 +72,29 @@ def worker(stop_event):
                 payment = try_parse_payment(tx)
                 if payment:
                     on_payment(address, payment)
-                CursorManager.save(tx['paging_token'])
+                cursor = CursorManager.save(tx['paging_token'])
             log.debug('save last cursor %s' % flow.cursor)
             # flow.cursor is the last block observed - it might not be a kin payment, 
             # so the previous .save inside the loop doesnt guarantee avoidance of reprocessing
-            CursorManager.save(flow.cursor)
+            cursor = CursorManager.save(flow.cursor)
         except Exception as e:
-            log.exception('failed worker iteration', error=e)
-        statsd.timing('worker_beat', time.time() - start_t)
+            statsd.increment('watcher_beat.failed', tags=['error:%s' % e])
+            log.exception('failed watcher iteration', error=e)
+        statsd.timing('watcher_beat', time.time() - start_t)
+        statsd.gauge('watcher_beat.cursor', cursor)
         report_balance()  # TODO do this in an external process:
 
 
 def report_balance():
     """report root wallet balance metrics to statsd."""
     try:
-        wallet = get_wallet(kin_sdk.get_address())
-        statsd.gauge('root_wallet.kin_balance', wallet.kin_balance)
-        statsd.gauge('root_wallet.native_balance', wallet.native_balance)
+        wallet = get_wallet(kin_sdk.root_wallet_address)
+        statsd.gauge('root_wallet.kin_balance', wallet.kin_balance, tags=['address:%s' % kin_sdk.root_wallet_address])
+        statsd.gauge('root_wallet.native_balance', wallet.native_balance, tags=['address:%s' % kin_sdk.root_wallet_address])
+        for channel_address in kin_sdk.channel_wallet_addresses:
+            wallet = get_wallet(channel_address)
+            statsd.gauge('channel_wallet.native_balance', wallet.native_balance, tags=['address:%s' % channel_address])
+
     except Exception:
         pass  # don't fail
 
