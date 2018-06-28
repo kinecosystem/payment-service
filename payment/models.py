@@ -147,6 +147,7 @@ class CursorManager:
     @classmethod
     def save(cls, cursor):
         redis_conn.set(cls._key(), cursor)
+        return cursor
 
     @classmethod
     def get(cls):

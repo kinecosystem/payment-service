@@ -15,13 +15,17 @@ def lock(redis_conn, key):
     except redis.exceptions.LockError:
         logging.error("failed to release lock")
 
-def retry(times, delay=0.3):
+
+def retry(times, delay=0.3, ignore=[]):
+    """retry on errors that aren't ignored."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             for i in range(times):
                 try:
                     return func(*args, **kwargs)
+                except tuple(ignore):  # ignored errors aren't retried
+                    raise
                 except Exception:
                     print('# retry %s: %s' % (func.__name__, i))
                     if i == times - 1:
