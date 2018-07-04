@@ -2,12 +2,14 @@ import kin
 from rq import Queue
 import requests
 from . import blockchain
+from . import config
 from .errors import PaymentNotFoundError
 from .log import get as get_log
 from .models import Payment, PaymentRequest, WalletRequest, Wallet
-from .utils import lock, retry
+from .utils import retry
 from .redis_conn import redis_conn
 from .statsd import statsd
+from .sdk_manager import write as get_sdk
 
 
 q = Queue(connection=redis_conn)
@@ -47,11 +49,11 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
     log.info('enqueue result', result=result, value=value)
 
 
-def enqueue_report_wallet_balance():
-    result = q.enqueue(
+def enqueue_report_wallet_balance(root_wallet_address, channel_wallet_addresses):
+    q.enqueue(
         report_balance,
-        blockchain.kin_sdk().root_wallet_address
-        blockchain.kin_sdk().channel_wallet_addresses)
+        root_wallet_address,
+        channel_wallet_addresses)
 
 
 def enqueue_wallet_callback(wallet_request: WalletRequest, value: Wallet):
@@ -125,7 +127,8 @@ def pay_and_callback(payment_request: dict):
     """lock, try to pay and callback."""
     log.info('pay_and_callback recieved', payment_request=payment_request)
     payment_request = PaymentRequest(payment_request)
-    with lock(redis_conn, 'payment:{}'.format(payment_request.id)):
+    with redis_conn.lock('lock:payment:{}'.format(payment_request.id),
+                         timeout=120, blocking_timeout=120):
         # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
         try:
             payment = pay(payment_request)
@@ -135,7 +138,6 @@ def pay_and_callback(payment_request: dict):
             enqueue_payment_failed_callback(payment_request, str(e))
         else:
             enqueue_payment_callback(payment_request.callback, payment.sender_address, payment)
-        enqueue_report_wallet_balance()
 
 
 def create_wallet_and_callback(wallet_request: dict):
@@ -151,7 +153,9 @@ def create_wallet_and_callback(wallet_request: dict):
         return blockchain.get_wallet(wallet_address)
 
     try:
-        create_wallet(wallet_request)
+        with get_sdk(config.STELLAR_BASE_SEED) as sdk:
+            create_wallet(sdk, wallet_request)
+            enqueue_report_wallet_balance(sdk.root_wallet_address, sdk.channel_wallet_addresses)
 
     except kin.AccountExistsError as e:
         statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
@@ -168,8 +172,6 @@ def create_wallet_and_callback(wallet_request: dict):
         wallet.id = wallet_request.id  # XXX id is required in webhook
         enqueue_wallet_callback(wallet_request, wallet)
 
-    enqueue_report_wallet_balance()
-
 
 def pay(payment_request: PaymentRequest):
     """pays only if not already paid."""
@@ -184,10 +186,15 @@ def pay(payment_request: PaymentRequest):
 
     # XXX retry on retry-able errors
     try:
-        tx_id = blockchain.pay_to(payment_request.recipient_address,
-                                  payment_request.amount,
-                                  payment_request.app_id,
-                                  payment_request.id)
+        with get_sdk(config.STELLAR_BASE_SEED) as sdk:
+            tx_id = blockchain.pay_to(
+                sdk,
+                payment_request.recipient_address,
+                payment_request.amount,
+                payment_request.app_id,
+                payment_request.id)
+            enqueue_report_wallet_balance(sdk.root_wallet_address, sdk.channel_wallet_addresses)
+
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
         statsd.inc_count('transaction.paid',
                          payment_request.amount,
