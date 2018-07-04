@@ -21,7 +21,7 @@ def get_last_cursor():
     if not cursor:
         @retry(5, 0.2)
         def get_from_horizon():
-            reply = kin_sdk.horizon.payments(params={'cursor': 'now', 'order': 'desc', 'limit': 1})
+            reply = kin_sdk().horizon.payments(params={'cursor': 'now', 'order': 'desc', 'limit': 1})
             return reply['_embedded']['records'][0]['paging_token']
         cursor = get_from_horizon()
         log.info('got payment cursor from horizon', cursor=cursor)
@@ -82,21 +82,6 @@ def worker(stop_event):
             log.exception('failed watcher iteration', error=e)
         statsd.timing('watcher_beat', time.time() - start_t)
         statsd.gauge('watcher_beat.cursor', cursor)
-        report_balance()  # TODO do this in an external process:
-
-
-def report_balance():
-    """report root wallet balance metrics to statsd."""
-    try:
-        wallet = get_wallet(kin_sdk.root_wallet_address)
-        statsd.gauge('root_wallet.kin_balance', wallet.kin_balance, tags=['address:%s' % kin_sdk.root_wallet_address])
-        statsd.gauge('root_wallet.native_balance', wallet.native_balance, tags=['address:%s' % kin_sdk.root_wallet_address])
-        for channel_address in kin_sdk.channel_wallet_addresses:
-            wallet = get_wallet(channel_address)
-            statsd.gauge('channel_wallet.native_balance', wallet.native_balance, tags=['address:%s' % channel_address])
-
-    except Exception:
-        pass  # don't fail
 
 
 def init():

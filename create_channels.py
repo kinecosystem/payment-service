@@ -25,7 +25,7 @@ def generate_key(idx):
 
 def create_wallet(public_address):
     try:
-        account_exists = kin_sdk.check_account_exists(public_address)
+        account_exists = kin_sdk().check_account_exists(public_address)
     except Exception:
         pass
     else:
@@ -34,7 +34,7 @@ def create_wallet(public_address):
 
     memo = '1-kin-init_channel'
     try:
-        tx_id = kin_sdk.create_account(public_address, INITIAL_XLM_AMOUNT, memo)
+        tx_id = kin_sdk().create_account(public_address, INITIAL_XLM_AMOUNT, memo)
         return tx_id
     except AccountExistsError:
         return

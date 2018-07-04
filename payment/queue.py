@@ -47,6 +47,13 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
     log.info('enqueue result', result=result, value=value)
 
 
+def enqueue_report_wallet_balance():
+    result = q.enqueue(
+        report_balance,
+        blockchain.kin_sdk().root_wallet_address
+        blockchain.kin_sdk().channel_wallet_addresses)
+
+
 def enqueue_wallet_callback(wallet_request: WalletRequest, value: Wallet):
     __enqueue_callback(
         callback=wallet_request.callback,
@@ -128,13 +135,14 @@ def pay_and_callback(payment_request: dict):
             enqueue_payment_failed_callback(payment_request, str(e))
         else:
             enqueue_payment_callback(payment_request.callback, payment.sender_address, payment)
+        enqueue_report_wallet_balance()
 
 
 def create_wallet_and_callback(wallet_request: dict):
     log.info('create_wallet_and_callback recieved', wallet_request=wallet_request)
     wallet_request = WalletRequest(wallet_request)
 
-    @retry(5, 0.2, ignore=[kin.AccountExistsError])
+    @retry(5, 0.2, ignore=[kin.AccountExistsError, kin.LowBalanceError])
     def create_wallet(wallet_request):
         return blockchain.create_wallet(wallet_request.wallet_address, wallet_request.app_id)
 
@@ -159,6 +167,8 @@ def create_wallet_and_callback(wallet_request: dict):
         wallet = get_wallet(wallet_request.wallet_address)
         wallet.id = wallet_request.id  # XXX id is required in webhook
         enqueue_wallet_callback(wallet_request, wallet)
+
+    enqueue_report_wallet_balance()
 
 
 def pay(payment_request: PaymentRequest):
@@ -199,3 +209,20 @@ def pay(payment_request: PaymentRequest):
     log.info('payment complete - submit back to callback payment.callback', payment=payment)
 
     return payment
+
+
+def report_balance(root_address, channel_addresses):
+    """report root wallet balance metrics to statsd."""
+    try:
+        wallet = blockchain.get_wallet(root_address)
+        statsd.gauge('root_wallet.kin_balance', wallet.kin_balance,
+                     tags=['address:%s' % root_address])
+        statsd.gauge('root_wallet.native_balance', wallet.native_balance,
+                     tags=['address:%s' % root_address])
+        for channel_address in channel_addresses:
+            wallet = blockchain.get_wallet(channel_address)
+            statsd.gauge('channel_wallet.native_balance', wallet.native_balance,
+                         tags=['address:%s' % channel_address])
+
+    except Exception:
+        pass  # don't fail

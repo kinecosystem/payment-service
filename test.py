@@ -5,7 +5,6 @@ class config:
     STELLAR_HORIZON_URL = 'https://horizon-testnet.stellar.org/'
     STELLAR_NETWORK = 'TESTNET'
     STELLAR_KIN_ISSUER_ADDRESS = 'GCKG5WGBIJP74UDNRIRDFGENNIH5Y3KBI5IHREFAJKV4MQXLELT7EX6V'
-    STELLAR_CHANNEL_SEEDS = os.environ['STELLAR_CHANNEL_SEEDS'].split(',')
     STELLAR_BASE_SEED = os.environ['STELLAR_BASE_SEED']
     STELLAR_INITIAL_XLM_AMOUNT = 10
     DEBUG = True
@@ -15,8 +14,7 @@ class config:
 kin_sdk = kin.SDK(
     secret_key=config.STELLAR_BASE_SEED,
     horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-    network=config.STELLAR_NETWORK,
-    channel_secret_keys=config.STELLAR_CHANNEL_SEEDS)
+    network=config.STELLAR_NETWORK)
 # XXX testing
 
 

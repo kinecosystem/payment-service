@@ -29,10 +29,10 @@ An example for these variables exists in `local.sh`. The makefile uses this file
 
 In addition to the public configuration, there is a "secret" configuration which contains the stellar private keys for the root wallet of the service (this is the wallet that will create accounts and send KIN):
 * `STELLAR_BASE_SEED` Main stellar secret key
-* `STELLAR_CHANNEL_SEEDS` extra signing keys (used for concurrency)
-* `STELLAR_ADDRESS` Main stellar public address
 
 They can either be generated using the `make generate-funding-address` script or manually created. Make sure the address contains enough KIN and XLM for operation.
+
+For the worker, you need to configure a `CHANNEL_SALT` that will be used to derive a channel to sign outgoing transactions and enable concurrency across multiple workers.
 
 ## Flow
 
@@ -140,9 +140,7 @@ Change into the Repo's directory and run ```pipenv install``` (Python 3 and pipe
 #### Step 4: create or set the secrets file with wallet data
 You need to have a stellar account with funds and create a `secrets/.secrets` file locally with the following content:
 ```
-export STELLAR_CHANNEL_SEEDS=SXXX
 export STELLAR_BASE_SEED=SXXX
-export STELLAR_ADDRESS=GXXX
 ```
 
 #### Step 5: Run the service (hopefully)
@@ -167,9 +165,7 @@ Note that this command will overwrite any existing file `secrets/.secrets`.
 If you have a wallet with XLM and KIN:
 You need to have a stellar account with funds and create a `secrets/.secrets` file locally with the following content:
 ```
-export STELLAR_CHANNEL_SEEDS=SXXX
 export STELLAR_BASE_SEED=SXXX
-export STELLAR_ADDRESS=GXXX
 ```
 
 #### Run docker servers and system tests
