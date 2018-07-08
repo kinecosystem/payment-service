@@ -17,7 +17,7 @@ services:
       APP_HOST: '0.0.0.0'
       APP_NAME: 'payment-service'
       APP_REDIS: redis://redis:6379/0
-      STELLAR_CHANNEL_SEEDS: ${STELLAR_CHANNEL_SEEDS}
+      CHANNEL_SALT: some_salt
       STELLAR_BASE_SEED: ${STELLAR_BASE_SEED}
       STELLAR_ADDRESS: ${STELLAR_ADDRESS}
       STELLAR_HORIZON_URL: ${STELLAR_HORIZON_URL}
@@ -30,7 +30,7 @@ services:
     image: kinecosystem/payment-service
     volumes:
       - .:/opt/app
-    command: pipenv run rq worker --url redis://redis:6379/0
+    command: pipenv run python worker.py
     links:
       - redis
     environment:

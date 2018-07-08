@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType, ListType
+from kin.stellar.horizon_models import TransactionData
 from .errors import PaymentNotFoundError, ParseError
 from .redis_conn import redis_conn
 
@@ -66,7 +67,7 @@ class Payment(ModelWithStr):
     timestamp = DateTimeType(default=datetime.utcnow())
 
     @classmethod
-    def from_blockchain(cls, data):
+    def from_blockchain(cls, data: TransactionData):
         t = Payment()
         t.id = cls.parse_memo(data.memo).payment_id
         t.app_id = cls.parse_memo(data.memo).app_id
@@ -143,6 +144,16 @@ class Watcher(ModelWithStr):
                 if address in w.wallet_addresses]
 
 
+class TransactionRecord(ModelWithStr):
+    to_address = StringType(serialized_name='to', required=True)
+    from_address = StringType(serialized_name='from', required=True)
+    transaction_hash = StringType(required=True)
+    asset_code = StringType()
+    asset_issuer = StringType()
+    paging_token = StringType(required=True)
+    type = StringType(required=True)
+
+
 class CursorManager:
     @classmethod
     def save(cls, cursor):
@@ -157,3 +168,4 @@ class CursorManager:
     @classmethod
     def _key(cls):
         return 'cursor'
+

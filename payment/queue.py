@@ -1,13 +1,14 @@
 import kin
 from rq import Queue
 import requests
-from . import blockchain
+from . import config
 from .errors import PaymentNotFoundError
 from .log import get as get_log
 from .models import Payment, PaymentRequest, WalletRequest, Wallet
-from .utils import lock, retry
+from .utils import retry, lock
 from .redis_conn import redis_conn
 from .statsd import statsd
+from .blockchain import Blockchain, get_sdk
 
 
 q = Queue(connection=redis_conn)
@@ -45,6 +46,13 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
                        action=action,
                        value=value)
     log.info('enqueue result', result=result, value=value)
+
+
+def enqueue_report_wallet_balance(root_wallet_address, channel_wallet_addresses):
+    q.enqueue(
+        report_balance,
+        root_wallet_address,
+        channel_wallet_addresses)
 
 
 def enqueue_wallet_callback(wallet_request: WalletRequest, value: Wallet):
@@ -118,8 +126,7 @@ def pay_and_callback(payment_request: dict):
     """lock, try to pay and callback."""
     log.info('pay_and_callback recieved', payment_request=payment_request)
     payment_request = PaymentRequest(payment_request)
-    with lock(redis_conn, 'payment:{}'.format(payment_request.id)):
-        # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
+    with lock(redis_conn, 'payment:{}'.format(payment_request.id), blocking_timeout=120):
         try:
             payment = pay(payment_request)
         except kin.AccountNotActivatedError:
@@ -134,16 +141,18 @@ def create_wallet_and_callback(wallet_request: dict):
     log.info('create_wallet_and_callback recieved', wallet_request=wallet_request)
     wallet_request = WalletRequest(wallet_request)
 
-    @retry(5, 0.2, ignore=[kin.AccountExistsError])
-    def create_wallet(wallet_request):
+    @retry(5, 0.2, ignore=[kin.AccountExistsError, kin.LowBalanceError])
+    def create_wallet(blockchain, wallet_request):
         return blockchain.create_wallet(wallet_request.wallet_address, wallet_request.app_id)
 
     @retry(10, 3)
     def get_wallet(wallet_address):
-        return blockchain.get_wallet(wallet_address)
+        return Blockchain.get_wallet(wallet_address)
 
     try:
-        create_wallet(wallet_request)
+        with get_sdk(config.STELLAR_BASE_SEED) as blockchain:
+            create_wallet(blockchain, wallet_request)
+            enqueue_report_wallet_balance(blockchain.root_address, blockchain.channel_addresses)
 
     except kin.AccountExistsError as e:
         statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
@@ -174,10 +183,14 @@ def pay(payment_request: PaymentRequest):
 
     # XXX retry on retry-able errors
     try:
-        tx_id = blockchain.pay_to(payment_request.recipient_address,
-                                  payment_request.amount,
-                                  payment_request.app_id,
-                                  payment_request.id)
+        with get_sdk(config.STELLAR_BASE_SEED) as blockchain:
+            tx_id = blockchain.pay_to(
+                payment_request.recipient_address,
+                payment_request.amount,
+                payment_request.app_id,
+                payment_request.id)
+            enqueue_report_wallet_balance(blockchain.root_address, blockchain.channel_addresses)
+
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
         statsd.inc_count('transaction.paid',
                          payment_request.amount,
@@ -190,12 +203,29 @@ def pay(payment_request: PaymentRequest):
 
     # cache the payment result / XXX maybe this can be done locally without getting the data from horizon
     @retry(10, 3)
-    def get_transaction_data(tx_id):
-        return blockchain.get_transaction_data(tx_id)
+    def get_payment_data(tx_id):
+        return Blockchain.get_payment_data(tx_id)
 
-    payment = get_transaction_data(tx_id)
+    payment = get_payment_data(tx_id)
     payment.save()
 
     log.info('payment complete - submit back to callback payment.callback', payment=payment)
 
     return payment
+
+
+def report_balance(root_address, channel_addresses):
+    """report root wallet balance metrics to statsd."""
+    try:
+        wallet = Blockchain.get_wallet(root_address)
+        statsd.gauge('root_wallet.kin_balance', wallet.kin_balance,
+                     tags=['address:%s' % root_address])
+        statsd.gauge('root_wallet.native_balance', wallet.native_balance,
+                     tags=['address:%s' % root_address])
+        for channel_address in channel_addresses:
+            wallet = Blockchain.get_wallet(channel_address)
+            statsd.gauge('channel_wallet.native_balance', wallet.native_balance,
+                         tags=['address:%s' % channel_address])
+
+    except Exception:
+        pass  # don't fail

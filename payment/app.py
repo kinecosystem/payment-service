@@ -3,13 +3,13 @@ from .log import init as init_log
 
 log = init_log()
 from flask import Flask, request, jsonify
-from . import blockchain
 from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from .queue import enqueue_create_wallet, enqueue_send_payment
 from .utils import get_network_passphrase
+from .blockchain import Blockchain
 
 
 app = Flask(__name__)
@@ -29,7 +29,7 @@ def create_wallet():
 @app.route('/wallets/<wallet_address>', methods=['GET'])
 @handle_errors
 def get_wallet(wallet_address):
-    w = blockchain.get_wallet(wallet_address)
+    w = Blockchain.get_wallet(wallet_address)
     return jsonify(w.to_primitive())
 
 
@@ -39,7 +39,7 @@ def get_wallet_payments(wallet_address):
     payments = []
     flow = TransactionFlow(cursor=0)
     for tx in flow.get_address_transactions(wallet_address):
-        payment = blockchain.try_parse_payment(tx)
+        payment = Blockchain.try_parse_payment(tx)
         if payment:
             payments.append(payment.to_primitive())
 

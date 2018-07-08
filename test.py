@@ -1,44 +1,57 @@
-import kin
-import os
+from payment.channel_factory import get_next_channel_id, generate_key
+from payment.blockchain import root_wallet
+import time
+from payment.redis_conn import redis_conn
 
-class config:
-    STELLAR_HORIZON_URL = 'https://horizon-testnet.stellar.org/'
-    STELLAR_NETWORK = 'TESTNET'
-    STELLAR_KIN_ISSUER_ADDRESS = 'GCKG5WGBIJP74UDNRIRDFGENNIH5Y3KBI5IHREFAJKV4MQXLELT7EX6V'
-    STELLAR_CHANNEL_SEEDS = os.environ['STELLAR_CHANNEL_SEEDS'].split(',')
-    STELLAR_BASE_SEED = os.environ['STELLAR_BASE_SEED']
-    STELLAR_INITIAL_XLM_AMOUNT = 10
-    DEBUG = True
-    build = {'commit': 'XXX'}
-
-
-kin_sdk = kin.SDK(
-    secret_key=config.STELLAR_BASE_SEED,
-    horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-    network=config.STELLAR_NETWORK,
-    channel_secret_keys=config.STELLAR_CHANNEL_SEEDS)
-# XXX testing
+def main4():
+    with redis_conn.lock('lock:payment:{}'.format(3),
+                         timeout=10, blocking_timeout=10):
+        print('lock1')
+        with redis_conn.lock('lock:payment:{}'.format(3),
+                             timeout=10, blocking_timeout=10):
+            print('lock2')
 
 
-def print_me(address, data):
-    try:
-        print('='*100)
-        print('got data1:', address, data)
-        print('-'*100)
-        print data.ledger, data.paging_token
-        print('='*100)
-        return data.ledger
-    except Exception as e:
-        print('failed', e)
+def main3():
+    for i in range(20):
+        print(i, generate_key(root_wallet, i).address())
 
 
-def blah(address, cursor='now'):
-    gen = kin_sdk.monitor_accounts_kin_payments_gen([address], cursor)  # XXX this starts a thread that I have no control over :(
-    print('starting from %s' % cursor)
-    for add, data in gen:
-        print_me(add, data)
+def main2():
+    with get_next_channel_id() as ch0:
+        print(ch0)
+        with get_next_channel_id() as ch1:
+            print(ch1)
+            with get_next_channel_id() as ch2:
+                print(ch2)
+                time.sleep(0.5)
+
+
+def main1():
+    from payment.blockchain import Blockchain, get_sdk
+    from payment import config
+    print('started')
+    cursor = Blockchain.get_last_cursor()
+    records = Blockchain.get_all_records(cursor, 100)
+    if not records:
+        print('no records')
+    else:
+        print('wallet: ', Blockchain.get_wallet(records[0].from_address))
+
+    with get_sdk(config.STELLAR_BASE_SEED) as bc1:
+        print(bc1.channel_addresses[0])
+        print('wallet: ', Blockchain.get_wallet(bc1.channel_addresses[0]))
+        with get_sdk(config.STELLAR_BASE_SEED) as bc2:
+            print(bc2.channel_addresses[0])
+            print('wallet: ', Blockchain.get_wallet(bc2.channel_addresses[0]))
+            with get_sdk(config.STELLAR_BASE_SEED) as bc3:
+                print(bc3.channel_addresses[0])
+                print('wallet: ', Blockchain.get_wallet(bc3.channel_addresses[0]))
+
+    with get_sdk(config.STELLAR_BASE_SEED) as bc1:
+        print(bc1.channel_addresses[0])
+        print('wallet: ', Blockchain.get_wallet(bc1.channel_addresses[0]))
 
 
 if __name__ == '__main__':
-    import sys
-    blah('GBOQY4LENMPZGBROR7PE5U3UXMK22OTUBCUISVEQ6XOQ2UDPLELIEC4J', sys.argv[1])
+    main2()

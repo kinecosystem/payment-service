@@ -4,9 +4,9 @@ from rq import Connection, Worker
 from rq.job import Job
 
 # Preload libraries
-from payment.blockchain import kin_sdk
 from payment.statsd import statsd
 from payment.log import get as get_log
+from payment import config
 from payment.redis_conn import redis_conn
 
 
@@ -19,7 +19,6 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
 
 
 with Connection():
-    qs = sys.argv[1:] or ['default']
-
-    w = Worker(qs, connection=redis_conn, exception_handlers=[rq_error_handler])
+    queue_names = ['default']
+    w = Worker(queue_names, connection=redis_conn, exception_handlers=[rq_error_handler])
     w.work()
