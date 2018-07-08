@@ -4,7 +4,6 @@ from rq import Connection, Worker
 from rq.job import Job
 
 # Preload libraries
-from payment.channel_factory import init_sdk_with_channel
 from payment.statsd import statsd
 from payment.log import get as get_log
 from payment import config
@@ -20,9 +19,6 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
 
 
 with Connection():
-    # get the next available channel from redis
-    init_sdk_with_channel()
-
     queue_names = ['default']
     w = Worker(queue_names, connection=redis_conn, exception_handlers=[rq_error_handler])
     w.work()

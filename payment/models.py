@@ -143,6 +143,16 @@ class Watcher(ModelWithStr):
                 if address in w.wallet_addresses]
 
 
+class TransactionRecord(ModelWithStr):
+    to_address = StringType(serialized_name='to', required=True)
+    from_address = StringType(serialized_name='from', required=True)
+    transaction_hash = StringType(required=True)
+    asset_code = StringType()
+    asset_issuer = StringType()
+    paging_token = StringType(required=True)
+    type = StringType(required=True)
+
+
 class CursorManager:
     @classmethod
     def save(cls, cursor):
@@ -157,3 +167,4 @@ class CursorManager:
     @classmethod
     def _key(cls):
         return 'cursor'
+

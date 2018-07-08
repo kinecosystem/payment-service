@@ -1,10 +1,10 @@
 import contextlib
 import stellar_base
+from typing import List
 from kin.errors import AccountExistsError, AccountNotFoundError
 from kin.sdk import Keypair, ChannelManager, SDK
-from .channel_factory import get_channel
 from . import config
-from .models import Payment, Wallet
+from .models import Payment, Wallet, TransactionRecord
 from .utils import get_network_name
 from .log import get as get_log
 from .errors import ParseError, WalletNotFoundError
@@ -92,24 +92,24 @@ class Blockchain(object):
             return
 
     @staticmethod
-    def get_address_records(address, cursor, limit=100):
+    def get_address_records(address, cursor, limit=100) -> List[TransactionRecord]:
         log.debug('getting records from', address=address, cursor=cursor)
         reply = Blockchain.read_sdk.horizon.account_payments(
             address=address,
             params={'cursor': cursor,
                     'order': 'asc',
                     'limit': limit})
-        records = reply['_embedded']['records']
+        records = [TransactionRecord(r, strict=False) for r in reply['_embedded']['records']]
         return records
 
     @staticmethod
-    def get_all_records(cursor, limit=100):
+    def get_all_records(cursor, limit=100) -> List[TransactionRecord]:
         log.debug('getting records from', cursor=cursor)
         reply = Blockchain.read_sdk.horizon.payments(
             params={'cursor': cursor,
                     'order': 'asc',
                     'limit': limit})
-        records = reply['_embedded']['records']
+        records = [TransactionRecord(r, strict=False) for r in reply['_embedded']['records']]
         return records
 
     @staticmethod
@@ -124,6 +124,7 @@ root_wallet = Blockchain(_init(config.STELLAR_BASE_SEED), seed_to_address(config
 
 @contextlib.contextmanager
 def get_sdk(seed: str) -> Blockchain:
+    from .channel_factory import get_channel
     global _write_sdks
     address = seed_to_address(seed)
 
