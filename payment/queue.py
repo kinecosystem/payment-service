@@ -5,7 +5,7 @@ from . import config
 from .errors import PaymentNotFoundError
 from .log import get as get_log
 from .models import Payment, PaymentRequest, WalletRequest, Wallet
-from .utils import retry
+from .utils import retry, lock
 from .redis_conn import redis_conn
 from .statsd import statsd
 from .blockchain import Blockchain, get_sdk
@@ -126,9 +126,7 @@ def pay_and_callback(payment_request: dict):
     """lock, try to pay and callback."""
     log.info('pay_and_callback recieved', payment_request=payment_request)
     payment_request = PaymentRequest(payment_request)
-    with redis_conn.lock('lock:payment:{}'.format(payment_request.id),
-                         timeout=120, blocking_timeout=120):
-        # XXX maybe separate this into 2 tasks - 1 pay, 2 callback
+    with lock(redis_conn, 'payment:{}'.format(payment_request.id), blocking_timeout=120):
         try:
             payment = pay(payment_request)
         except kin.AccountNotActivatedError:

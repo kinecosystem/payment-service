@@ -1,9 +1,9 @@
 import contextlib
 import time
 from hashlib import sha256
-from redis.exceptions import LockError
 from kin.sdk import Keypair
 from kin import AccountExistsError
+from .utils import lock
 from . import config
 from .redis_conn import redis_conn
 from .blockchain import Blockchain
@@ -41,14 +41,10 @@ def get_next_channel_id():
     max_channels = redis_conn.get('MAX_CHANNELS') or DEFAULT_MAX_CHANNELS
     for i in range(MAX_LOCK_TRIES):
         for channel_id in range(max_channels):
-            lock = redis_conn.lock('lock:channel:%s' % channel_id, timeout=120, blocking_timeout=0)
-            if lock.acquire():
-                yield channel_id
-                try:
-                    lock.release()
-                except LockError:
-                    log.error("failed to release lock")
-                return
+            with lock(redis_conn, 'channel:{}'.format(channel_id), blocking_timeout=0) as is_locked:
+                if is_locked:
+                    yield channel_id
+                    return  # end generator
         time.sleep(SLEEP_BETWEEN_LOCKS)
 
 

@@ -1,6 +1,15 @@
 from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 import time
+from payment.redis_conn import redis_conn
+
+def main4():
+    with redis_conn.lock('lock:payment:{}'.format(3),
+                         timeout=10, blocking_timeout=10):
+        print('lock1')
+        with redis_conn.lock('lock:payment:{}'.format(3),
+                             timeout=10, blocking_timeout=10):
+            print('lock2')
 
 
 def main3():
@@ -45,4 +54,4 @@ def main1():
 
 
 if __name__ == '__main__':
-    main1()
+    main2()
