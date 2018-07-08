@@ -13,8 +13,11 @@ def lock(redis_conn, key, blocking_timeout=None):
     try:
         if is_locked:
             _lock.release()
+            logging.warn("released %s" % key)
+        else:
+            logging.warn("did not release %s" % key)
     except redis.exceptions.LockError:
-        logging.error("failed to release lock")
+        logging.error("failed to release lock %s" % key)
 
 
 def retry(times, delay=0.3, ignore=[]):
