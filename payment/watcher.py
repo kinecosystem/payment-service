@@ -1,11 +1,10 @@
 import threading
 import time
 
-from .blockchain import kin_sdk, get_wallet, try_parse_payment
+from .blockchain import Blockchain
 from .queue import enqueue_payment_callback
-from .errors import ParseError
 from .log import get as get_log
-from .models import Payment, Watcher, CursorManager
+from .models import Watcher, CursorManager
 from .transaction_flow import TransactionFlow
 from .utils import retry
 from .statsd import statsd
@@ -21,8 +20,7 @@ def get_last_cursor():
     if not cursor:
         @retry(5, 0.2)
         def get_from_horizon():
-            reply = kin_sdk().horizon.payments(params={'cursor': 'now', 'order': 'desc', 'limit': 1})
-            return reply['_embedded']['records'][0]['paging_token']
+            return Blockchain.get_last_cursor()
         cursor = get_from_horizon()
         log.info('got payment cursor from horizon', cursor=cursor)
         CursorManager.save(cursor)
@@ -69,7 +67,7 @@ def worker(stop_event):
             flow = TransactionFlow(cursor)
             for address, tx in flow.get_transactions(addresses):
                 log.info('found transaction for address', address=address)
-                payment = try_parse_payment(tx)
+                payment = Blockchain.try_parse_payment(tx)
                 if payment:
                     on_payment(address, payment)
                 cursor = CursorManager.save(tx['paging_token'])

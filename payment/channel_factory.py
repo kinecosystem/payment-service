@@ -1,10 +1,10 @@
 import contextlib
-from .blockchain import create_wallet, get_wallet
+from hashlib import sha256
+from kin.sdk import Keypair
+from kin import AccountExistsError
 from . import config
 from .redis_conn import redis_conn
-from hashlib import sha256
-from kin.sdk import Keypair, SDK
-from kin import AccountExistsError
+from .blockchain import Blockchain
 
 
 INITIAL_XLM_AMOUNT = 5
@@ -20,10 +20,10 @@ def generate_key(idx):
     return Keypair.from_raw_seed(sha256(root_seed + idx_bytes + config.CHANNEL_SALT.encode()).digest()[:32])
 
 
-def top_up(sdk: SDK, public_address, lower_limit=INITIAL_XLM_AMOUNT-1, upper_limit=INITIAL_XLM_AMOUNT):
-    wallet = get_wallet(public_address)
+def top_up(root_wallet: Blockchain, public_address, lower_limit=INITIAL_XLM_AMOUNT-1, upper_limit=INITIAL_XLM_AMOUNT):
+    wallet = Blockchain.get_wallet(public_address)
     if wallet.native_balance < lower_limit:
-        sdk.send_native(public_address, upper_limit - wallet.native_balance, MEMO_TOPUP)
+        root_wallet.send_native(public_address, upper_limit - wallet.native_balance, MEMO_TOPUP)
 
 
 @contextlib.contextmanager
@@ -39,16 +39,16 @@ def get_next_channel_id():
 
 
 @contextlib.contextmanager
-def get_channel(funder: SDK):
+def get_channel(root_wallet: Blockchain):
     """gets next channel_id from redis, generates address/ tops up and inits sdk."""
     with get_next_channel_id() as channel_id:
         keys = generate_key(channel_id)
         public_address = keys.address().decode()
         try:
-            create_wallet(funder, public_address, MEMO_INIT, INITIAL_XLM_AMOUNT)
+            root_wallet.create_wallet(public_address, MEMO_INIT, INITIAL_XLM_AMOUNT)
             print('# created channel: %s' % public_address)
         except AccountExistsError:
-            top_up(funder, public_address)
+            top_up(root_wallet, public_address)
             print('# top up channel: %s' % public_address)
 
         yield keys.seed().decode()

@@ -1,4 +1,4 @@
-from .blockchain import kin_sdk
+from .blockchain import  Blockchain
 from .log import get as get_log
 
 
@@ -16,8 +16,8 @@ class TransactionFlow():
         while records:
             for record in records:
                 if (record['type'] == 'payment'
-                        and record.get('asset_code') == kin_sdk().kin_asset.code
-                        and record.get('asset_issuer') == kin_sdk().kin_asset.issuer):
+                        and record.get('asset_code') == Blockchain.asset_code
+                        and record.get('asset_issuer') == Blockchain.asset_issuer):
                     yield record
                 self.cursor = record['paging_token']
             records = get_records(self.cursor)
@@ -25,34 +25,18 @@ class TransactionFlow():
     def get_address_transactions(self, address):
         """get KIN payment transactions for given address."""
         def get_address_records(cursor):
-            log.debug('getting records from', address=address, cursor=cursor)
-            reply = kin_sdk().horizon.account_payments(
-                address=address,
-                params={'cursor': cursor,
-                        'order': 'asc',
-                        'limit': 100})
-            records = reply['_embedded']['records']
-            log.debug('got records', num=len(records), cursor=cursor)
-            return records
+            return Blockchain.get_address_records(address, cursor, 100)
 
         for record in self._yield_transactions(get_address_records):
-            yield kin_sdk().get_transaction_data(record['transaction_hash'])
+            yield Blockchain.get_transaction_data(record['transaction_hash'])
 
     def get_transactions(self, addresses):
-        """get KIN payment transactions for given addresses."""
         def get_all_records(cursor):
-            log.debug('getting records from', cursor=cursor)
-            reply = kin_sdk().horizon.payments(
-                params={'cursor': cursor,
-                        'order': 'asc',
-                        'limit': 100})
-            records = reply['_embedded']['records']
-            log.debug('got records', num=len(records), cursor=cursor)
-            return records
+            return Blockchain.get_all_records(cursor, 100)
 
         for record in self._yield_transactions(get_all_records):
             if record['to'] in addresses:
-                yield record['to'], kin_sdk().get_transaction_data(record['transaction_hash'])
+                yield record['to'], Blockchain.get_transaction_data(record['transaction_hash'])
             elif record['from'] in addresses:
-                yield record['from'], kin_sdk().get_transaction_data(record['transaction_hash'])
+                yield record['from'], Blockchain.get_transaction_data(record['transaction_hash'])
             # else - address is not watched
