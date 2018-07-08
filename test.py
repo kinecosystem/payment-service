@@ -4,11 +4,17 @@ import time
 from payment.redis_conn import redis_conn
 from payment.utils import lock
 
+
 def main4():
-    with lock(redis_conn, 'lock:payment:{}'.format(3), blocking_timeout=10):
-        print('lock1')
-        with lock(redis_conn, 'lock:payment:{}'.format(3), blocking_timeout=10):
-            print('lock2')
+    try:
+        with lock(redis_conn, 'test:{}'.format(3), blocking_timeout=120):
+            print('lock1')
+            time.sleep(30)
+            with lock(redis_conn, 'test:{}'.format(4), blocking_timeout=120):
+                print('lock2')
+                raise Exception
+    except:
+        print('caught')
 
 
 def main3():

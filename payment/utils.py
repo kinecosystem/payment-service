@@ -7,17 +7,16 @@ import logging
 
 @contextlib.contextmanager
 def lock(redis_conn, key, blocking_timeout=None):
-    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=blocking_timeout)
+    _lock = redis_conn.lock('__lock:{}'.format(key), blocking_timeout=blocking_timeout, timeout=120)
     is_locked = _lock.acquire()
-    yield is_locked
     try:
-        if is_locked:
-            _lock.release()
-            logging.warn("released %s" % key)
-        else:
-            logging.warn("did not release %s" % key)
-    except redis.exceptions.LockError:
-        logging.error("failed to release lock %s" % key)
+        yield is_locked
+    finally:
+        try:
+            if is_locked:
+                _lock.release()
+        except redis.exceptions.LockError:
+            logging.error("failed to release lock %s" % key)
 
 
 def retry(times, delay=0.3, ignore=[]):

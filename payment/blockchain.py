@@ -141,6 +141,7 @@ def get_sdk(seed: str) -> Blockchain:
         channels = [channel]
         sdk.channel_manager = ChannelManager(seed, channels, sdk.network, sdk.horizon)
 
-        yield Blockchain(sdk, address, [seed_to_address(ch_seed) for ch_seed in channels])
-
-    sdk.channel_manager = None
+        try:
+            yield Blockchain(sdk, address, [seed_to_address(ch_seed) for ch_seed in channels])
+        finally:
+            sdk.channel_manager = None
