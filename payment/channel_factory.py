@@ -57,11 +57,11 @@ def get_channel(root_wallet: Blockchain):
         public_address = keys.address().decode()
         try:
             root_wallet.create_wallet(public_address, MEMO_INIT, INITIAL_XLM_AMOUNT)
-            log.info('# created channel: %s' % public_address)
+            log.info('# created channel: %s: %s' % (channel_id, public_address))
         except AccountExistsError:
             if top_up(root_wallet, public_address):
-                log.info('# top up channel: %s' % public_address)
+                log.info('# top up channel: %s: %s' % (channel_id, public_address))
             else:
-                log.info('# existing channel: %s' % public_address)
+                log.info('# existing channel: %s: %s' % (channel_id, public_address))
 
         yield keys.seed().decode()
