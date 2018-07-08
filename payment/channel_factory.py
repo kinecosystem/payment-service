@@ -12,7 +12,7 @@ from .log import get as get_log
 
 log = get_log()
 
-INITIAL_XLM_AMOUNT = 2
+INITIAL_XLM_AMOUNT = 3
 DEFAULT_MAX_CHANNELS = 20
 MAX_LOCK_TRIES = 5
 SLEEP_BETWEEN_LOCKS = 0.1
