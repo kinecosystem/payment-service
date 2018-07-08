@@ -2,6 +2,7 @@ import contextlib
 import stellar_base
 from typing import List
 from kin.errors import AccountExistsError, AccountNotFoundError
+from kin.stellar.horizon_models import TransactionData
 from kin.sdk import Keypair, ChannelManager, SDK
 from . import config
 from .models import Payment, Wallet, TransactionRecord
@@ -75,12 +76,15 @@ class Blockchain(object):
             raise WalletNotFoundError('wallet %s not found' % public_address)
 
     @staticmethod
-    def get_transaction_data(tx_id):
-        data = Blockchain.read_sdk.get_transaction_data(tx_id)
-        return Payment.from_blockchain(data)
+    def get_transaction_data(tx_id) -> TransactionData:
+        return Blockchain.read_sdk.get_transaction_data(tx_id)
 
     @staticmethod
-    def try_parse_payment(tx_data):
+    def get_payment_data(tx_id) -> Payment:
+        return Payment.from_blockchain(Blockchain.get_transaction_data(tx_id))
+
+    @staticmethod
+    def try_parse_payment(tx_data) -> Payment:
         """try to parse payment from given tx_data. return None when failed."""
         try:
             return Payment.from_blockchain(tx_data)

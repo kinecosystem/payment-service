@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType, ListType
+from kin.stellar.horizon_models import TransactionData
 from .errors import PaymentNotFoundError, ParseError
 from .redis_conn import redis_conn
 
@@ -66,7 +67,7 @@ class Payment(ModelWithStr):
     timestamp = DateTimeType(default=datetime.utcnow())
 
     @classmethod
-    def from_blockchain(cls, data):
+    def from_blockchain(cls, data: TransactionData):
         t = Payment()
         t.id = cls.parse_memo(data.memo).payment_id
         t.app_id = cls.parse_memo(data.memo).app_id

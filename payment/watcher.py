@@ -70,7 +70,7 @@ def worker(stop_event):
                 payment = Blockchain.try_parse_payment(tx)
                 if payment:
                     on_payment(address, payment)
-                cursor = CursorManager.save(tx['paging_token'])
+                cursor = CursorManager.save(tx.paging_token)
             log.debug('save last cursor %s' % flow.cursor)
             # flow.cursor is the last block observed - it might not be a kin payment, 
             # so the previous .save inside the loop doesnt guarantee avoidance of reprocessing

@@ -203,10 +203,10 @@ def pay(payment_request: PaymentRequest):
 
     # cache the payment result / XXX maybe this can be done locally without getting the data from horizon
     @retry(10, 3)
-    def get_transaction_data(tx_id):
-        return Blockchain.get_transaction_data(tx_id)
+    def get_payment_data(tx_id):
+        return Blockchain.get_payment_data(tx_id)
 
-    payment = get_transaction_data(tx_id)
+    payment = get_payment_data(tx_id)
     payment.save()
 
     log.info('payment complete - submit back to callback payment.callback', payment=payment)
