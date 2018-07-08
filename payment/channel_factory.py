@@ -1,5 +1,6 @@
 import contextlib
 import time
+from random import randint
 from hashlib import sha256
 from kin.sdk import Keypair
 from kin import AccountExistsError
@@ -14,8 +15,8 @@ log = get_log()
 
 INITIAL_XLM_AMOUNT = 3
 DEFAULT_MAX_CHANNELS = 20
-MAX_LOCK_TRIES = 5
-SLEEP_BETWEEN_LOCKS = 0.1
+MAX_LOCK_TRIES = 100
+SLEEP_BETWEEN_LOCKS = 0.01
 MEMO_INIT = 'kin-init_channel'
 MEMO_TOPUP = 'kin-topup-channel'
 
@@ -40,11 +41,11 @@ def get_next_channel_id():
     """get the next available channel_id from redis."""
     max_channels = redis_conn.get('MAX_CHANNELS') or DEFAULT_MAX_CHANNELS
     for i in range(MAX_LOCK_TRIES):
-        for channel_id in range(max_channels):
-            with lock(redis_conn, 'channel:{}'.format(channel_id), blocking_timeout=0) as is_locked:
-                if is_locked:
-                    yield channel_id
-                    return  # end generator
+        channel_id = randint(0, max_channels - 1)
+        with lock(redis_conn, 'channel:{}'.format(channel_id), blocking_timeout=0) as is_locked:
+            if is_locked:
+                yield channel_id
+                return  # end generator
         time.sleep(SLEEP_BETWEEN_LOCKS)
 
 
