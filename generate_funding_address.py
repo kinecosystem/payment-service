@@ -74,3 +74,4 @@ if __name__ == '__main__':
     os.makedirs(config.OUTPUT_DIR, exist_ok=True)
     with open(os.path.join(config.OUTPUT_DIR, '.secrets'), 'w') as f:
         print('export STELLAR_BASE_SEED=%s' % private_seed, file=f)
+        print('export STELLAR_ADDRESS=%s' % public_address, file=f)
