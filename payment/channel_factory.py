@@ -14,7 +14,7 @@ from .log import get as get_log
 log = get_log()
 
 INITIAL_XLM_AMOUNT = 3
-DEFAULT_MAX_CHANNELS = 20
+DEFAULT_MAX_CHANNELS = config.MAX_CHANNELS
 MAX_LOCK_TRIES = 100
 SLEEP_BETWEEN_LOCKS = 0.01
 MEMO_INIT = 'kin-init_channel'
@@ -47,7 +47,6 @@ def get_next_channel_id():
                 yield channel_id
                 return  # end generator
         time.sleep(SLEEP_BETWEEN_LOCKS)
-
 
 
 @contextlib.contextmanager
