@@ -71,7 +71,8 @@ class Payment(ModelWithStr):
         t = Payment()
         t.id = cls.parse_memo(data.memo).payment_id
         t.app_id = cls.parse_memo(data.memo).app_id
-        t.transaction_id = data.operations[0].id
+        t.transaction_id = data.hash
+        # t.operation_id = data.operations[0].id
         t.sender_address = data.operations[0].from_address
         t.recipient_address = data.operations[0].to_address
         t.amount = int(data.operations[0].amount)
