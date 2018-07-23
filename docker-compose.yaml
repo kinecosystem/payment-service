@@ -17,7 +17,6 @@ services:
       APP_HOST: '0.0.0.0'
       APP_NAME: 'payment-service'
       APP_REDIS: redis://redis:6379/0
-      CHANNEL_SALT: some_salt
       STELLAR_BASE_SEED: ${STELLAR_BASE_SEED}
       STELLAR_ADDRESS: ${STELLAR_ADDRESS}
       STELLAR_HORIZON_URL: ${STELLAR_HORIZON_URL}
@@ -35,6 +34,8 @@ services:
       - redis
     environment:
       <<: *app_env_vars
+      CHANNEL_SALT: some_salt
+      MAX_CHANNELS: 1
 
   payment-watcher:
     image: kinecosystem/payment-service

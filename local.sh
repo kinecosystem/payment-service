@@ -9,4 +9,5 @@ export \
     XLM_FAUCET='http://friendbot-playground.kininfrastructure.com' \
     STELLAR_INITIAL_XLM_AMOUNT=2 \
     CHANNEL_SALT='some_salt' \
-    APP_DEBUG=false
+    APP_DEBUG=false \
+    MAX_CHANNELS=1
