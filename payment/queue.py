@@ -133,6 +133,7 @@ def pay_and_callback(payment_request: dict):
             enqueue_payment_failed_callback(payment_request, "no trustline")
         except Exception as e:
             enqueue_payment_failed_callback(payment_request, str(e))
+            raise  # crash the job
         else:
             enqueue_payment_callback(payment_request.callback, payment.sender_address, payment)
 
@@ -150,14 +151,16 @@ def create_wallet_and_callback(wallet_request: dict):
             create_wallet(blockchain, wallet_request)
             enqueue_report_wallet_balance(blockchain.root_address, blockchain.channel_addresses)
 
-    except kin.AccountExistsError as e:
+    except kin.AccountExistsError:
         statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
         log.info('wallet already exists - ok', public_address=wallet_request.wallet_address)
         enqueue_wallet_failed_callback(wallet_request, "account exists")
 
     except Exception as e:
+        log.exception('failed to create wallet', error=e, wallet_id=wallet_request.id)
         statsd.increment('wallet.failed', tags=['app_id:%s' % wallet_request.app_id])
         enqueue_wallet_failed_callback(wallet_request, str(e))
+        raise  # crash the job
 
     else:
         statsd.increment('wallet.created', tags=['app_id:%s' % wallet_request.app_id])
