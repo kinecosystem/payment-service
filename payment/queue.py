@@ -55,16 +55,6 @@ def enqueue_report_wallet_balance(root_wallet_address, channel_wallet_addresses)
         channel_wallet_addresses)
 
 
-def enqueue_wallet_callback(wallet_request: WalletRequest, value: Wallet):
-    __enqueue_callback(
-        callback=wallet_request.callback,
-        app_id=wallet_request.app_id,
-        objekt='wallet',
-        state='success',
-        action='create',
-        value=value.to_primitive())
-
-
 def enqueue_payment_callback(callback: str, wallet_address: str, value: Payment):
     __enqueue_callback(
         callback=callback,
@@ -83,6 +73,16 @@ def enqueue_payment_failed_callback(request: PaymentRequest, reason: str):
         state='fail',
         action='send',
         value={'id': request.id, 'reason': reason})
+
+
+def enqueue_wallet_callback(request: WalletRequest):
+    __enqueue_callback(
+        callback=request.callback,
+        app_id=request.app_id,
+        objekt='wallet',
+        state='success',
+        action='create',
+        value={'id': request.id})
 
 
 def enqueue_wallet_failed_callback(request: WalletRequest, reason: str):
@@ -145,10 +145,6 @@ def create_wallet_and_callback(wallet_request: dict):
     def create_wallet(blockchain, wallet_request):
         return blockchain.create_wallet(wallet_request.wallet_address, wallet_request.app_id)
 
-    @retry(10, 3)
-    def get_wallet(wallet_address):
-        return Blockchain.get_wallet(wallet_address)
-
     try:
         with get_sdk(config.STELLAR_BASE_SEED) as blockchain:
             create_wallet(blockchain, wallet_request)
@@ -165,9 +161,7 @@ def create_wallet_and_callback(wallet_request: dict):
 
     else:
         statsd.increment('wallet.created', tags=['app_id:%s' % wallet_request.app_id])
-        wallet = get_wallet(wallet_request.wallet_address)
-        wallet.id = wallet_request.id  # XXX id is required in webhook
-        enqueue_wallet_callback(wallet_request, wallet)
+        enqueue_wallet_callback(wallet_request)
 
 
 def pay(payment_request: PaymentRequest):
