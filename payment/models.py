@@ -67,17 +67,28 @@ class Payment(ModelWithStr):
     timestamp = DateTimeType(default=datetime.utcnow())
 
     @classmethod
+    def from_payment_request(cls, request: PaymentRequest, sender_address: str, tx_id: str):
+        p = Payment()
+        p.id = request.id
+        p.app_id = request.app_id
+        p.transaction_id = tx_id
+        p.sender_address = sender_address
+        p.recipient_address = request.recipient_address
+        p.amount = request.amount
+        return p
+
+    @classmethod
     def from_blockchain(cls, data: TransactionData):
-        t = Payment()
-        t.id = cls.parse_memo(data.memo).payment_id
-        t.app_id = cls.parse_memo(data.memo).app_id
-        t.transaction_id = data.hash
-        # t.operation_id = data.operations[0].id
-        t.sender_address = data.operations[0].from_address
-        t.recipient_address = data.operations[0].to_address
-        t.amount = int(data.operations[0].amount)
-        t.timestamp = data.created_at
-        return t
+        p = Payment()
+        p.id = cls.parse_memo(data.memo).payment_id
+        p.app_id = cls.parse_memo(data.memo).app_id
+        p.transaction_id = data.hash
+        # p.operation_id = data.operations[0].id
+        p.sender_address = data.operations[0].from_address
+        p.recipient_address = data.operations[0].to_address
+        p.amount = int(data.operations[0].amount)
+        p.timestamp = data.created_at
+        return p
 
     @classmethod
     def parse_memo(cls, memo):

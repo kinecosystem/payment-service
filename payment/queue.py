@@ -199,12 +199,7 @@ def pay(payment_request: PaymentRequest):
         log.exception('failed to pay transaction', payment_id=payment_request.id)
         raise
 
-    # cache the payment result / XXX maybe this can be done locally without getting the data from horizon
-    @retry(10, 3)
-    def get_payment_data(tx_id):
-        return Blockchain.get_payment_data(tx_id)
-
-    payment = get_payment_data(tx_id)
+    payment = Payment.from_payment_request(payment_request, blockchain.root_address, tx_id)
     payment.save()
 
     log.info('payment complete - submit back to callback payment.callback', payment=payment)
