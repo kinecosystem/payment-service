@@ -19,11 +19,11 @@ def handle_errors(f):
         except Exception as e:
             if not isinstance(e, BaseError):
                 e = BaseError(str(e))
-            log.exception('uncaught error', error=e, payload=e.to_dict(), message=e.message)
             statsd.increment('server_error', tags=['path:%s' % request.url_rule.rule, 'error:%s' % e.message, 'method:%s' % request.method])
+            log.exception('uncaught error', payload=e.to_dict(), message=e.message)
             return jsonify(e.to_dict()), e.http_code
         finally:
-            log.info('response time', path=request.path, time=time.time() - start_time)
             statsd.timing('request', time.time() - start_time, tags=['path:%s' % request.url_rule.rule, 'method:%s' % request.method])
+            log.info('response time', path=request.path, time=time.time() - start_time)
 
     return inner
