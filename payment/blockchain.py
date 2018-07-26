@@ -89,10 +89,10 @@ class Blockchain(object):
         try:
             return Payment.from_blockchain(tx_data)
         except ParseError as e:
-            log.exception('failed to parse payment', tx_data=tx_data, error=e)
+            log.exception('failed to parse payment', tx_data=tx_data)
             return
         except Exception as e:
-            log.exception('failed to parse payment', tx_data=tx_data, error=e)
+            log.exception('failed to parse payment', tx_data=tx_data)
             return
 
     @staticmethod

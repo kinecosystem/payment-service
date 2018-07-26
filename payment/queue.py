@@ -55,16 +55,6 @@ def enqueue_report_wallet_balance(root_wallet_address, channel_wallet_addresses)
         channel_wallet_addresses)
 
 
-def enqueue_wallet_callback(wallet_request: WalletRequest, value: Wallet):
-    __enqueue_callback(
-        callback=wallet_request.callback,
-        app_id=wallet_request.app_id,
-        objekt='wallet',
-        state='success',
-        action='create',
-        value=value.to_primitive())
-
-
 def enqueue_payment_callback(callback: str, wallet_address: str, value: Payment):
     __enqueue_callback(
         callback=callback,
@@ -83,6 +73,16 @@ def enqueue_payment_failed_callback(request: PaymentRequest, reason: str):
         state='fail',
         action='send',
         value={'id': request.id, 'reason': reason})
+
+
+def enqueue_wallet_callback(request: WalletRequest):
+    __enqueue_callback(
+        callback=request.callback,
+        app_id=request.app_id,
+        objekt='wallet',
+        state='success',
+        action='create',
+        value={'id': request.id})
 
 
 def enqueue_wallet_failed_callback(request: WalletRequest, reason: str):
@@ -115,11 +115,12 @@ def call_callback(callback: str, app_id: str, objekt: str, state: str, action: s
             'action:%s' % action]
     try:
         response = retry_callback(callback, payload)
-        log.info('callback response', response=response, payload=payload)
         statsd.increment('callback.success', tags=tags)
+        log.info('callback response', response=response, payload=payload)
     except Exception as e:
-        log.error('callback failed', error=e, payload=payload)
         statsd.increment('callback.failed', tags=tags)
+        log.exception('callback failed', payload=payload)
+        raise
 
 
 def pay_and_callback(payment_request: dict):
@@ -133,6 +134,7 @@ def pay_and_callback(payment_request: dict):
             enqueue_payment_failed_callback(payment_request, "no trustline")
         except Exception as e:
             enqueue_payment_failed_callback(payment_request, str(e))
+            raise  # crash the job
         else:
             enqueue_payment_callback(payment_request.callback, payment.sender_address, payment)
 
@@ -141,33 +143,29 @@ def create_wallet_and_callback(wallet_request: dict):
     log.info('create_wallet_and_callback recieved', wallet_request=wallet_request)
     wallet_request = WalletRequest(wallet_request)
 
-    @retry(5, 0.2, ignore=[kin.AccountExistsError, kin.LowBalanceError])
+    @retry(10, 0.25, ignore=[kin.AccountExistsError, kin.LowBalanceError])
     def create_wallet(blockchain, wallet_request):
         return blockchain.create_wallet(wallet_request.wallet_address, wallet_request.app_id)
-
-    @retry(10, 3)
-    def get_wallet(wallet_address):
-        return Blockchain.get_wallet(wallet_address)
 
     try:
         with get_sdk(config.STELLAR_BASE_SEED) as blockchain:
             create_wallet(blockchain, wallet_request)
             enqueue_report_wallet_balance(blockchain.root_address, blockchain.channel_addresses)
 
-    except kin.AccountExistsError as e:
+    except kin.AccountExistsError:
         statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
-        log.info('wallet already exists - ok', public_address=wallet_request.wallet_address)
         enqueue_wallet_failed_callback(wallet_request, "account exists")
+        log.info('wallet already exists - ok', public_address=wallet_request.wallet_address)
 
     except Exception as e:
         statsd.increment('wallet.failed', tags=['app_id:%s' % wallet_request.app_id])
         enqueue_wallet_failed_callback(wallet_request, str(e))
+        log.exception('failed to create wallet', wallet_id=wallet_request.id)
+        raise  # crash the job
 
     else:
         statsd.increment('wallet.created', tags=['app_id:%s' % wallet_request.app_id])
-        wallet = get_wallet(wallet_request.wallet_address)
-        wallet.id = wallet_request.id  # XXX id is required in webhook
-        enqueue_wallet_callback(wallet_request, wallet)
+        enqueue_wallet_callback(wallet_request)
 
 
 def pay(payment_request: PaymentRequest):
@@ -196,9 +194,9 @@ def pay(payment_request: PaymentRequest):
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])
     except Exception as e:
-        log.exception('failed to pay transaction', error=e, payment_id=payment_request.id)
         statsd.increment('transaction.failed',
                          tags=['app_id:%s' % payment_request.app_id])
+        log.exception('failed to pay transaction', payment_id=payment_request.id)
         raise
 
     # cache the payment result / XXX maybe this can be done locally without getting the data from horizon

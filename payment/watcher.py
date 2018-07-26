@@ -77,7 +77,7 @@ def worker(stop_event):
             cursor = CursorManager.save(flow.cursor)
         except Exception as e:
             statsd.increment('watcher_beat.failed', tags=['error:%s' % e])
-            log.exception('failed watcher iteration', error=e)
+            log.exception('failed watcher iteration')
         statsd.timing('watcher_beat', time.time() - start_t)
         statsd.gauge('watcher_beat.cursor', cursor)
 
