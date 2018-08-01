@@ -8,6 +8,7 @@ run:
 	. ./local.sh && . ./secrets/.secrets && pipenv run gunicorn -b localhost:5000 payment.app:app
 
 worker:
+	redis-cli del cursor
 	. ./local.sh && . ./secrets/.secrets && pipenv run python worker.py
 
 watcher:
