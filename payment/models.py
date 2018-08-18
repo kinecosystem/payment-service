@@ -108,7 +108,7 @@ class Payment(ModelWithStr):
         data = redis_conn.get(cls._key(payment_id))
         if not data:
             raise PaymentNotFoundError('payment {} not found'.format(payment_id))
-        return Payment(json.loads(data))
+        return Payment(json.loads(data.decode('utf8')))
 
     @classmethod
     def _key(cls, id):
