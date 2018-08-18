@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.6"
+
+install:
+  - pipenv install
+
+before_script:
+  - make generate-funding-address
+
+script:
+  - make test
