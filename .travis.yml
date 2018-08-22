@@ -1,0 +1,15 @@
+language: python
+services:
+  - redis-server
+python:
+  - "3.6"
+
+install:
+  - pip install -U pip pipenv virtualenv
+  - pipenv install
+
+before_script:
+  - . ./local.sh && OUTPUT_DIR=./secrets pipenv run python generate_funding_address.py
+
+script:
+  - make test

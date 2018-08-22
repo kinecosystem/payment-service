@@ -14,8 +14,11 @@ worker:
 watcher:
 	. ./local.sh && . ./secrets/.secrets && pipenv run python watcher.py
 
+test:
+	. ./local.sh && . ./secrets/.secrets && pipenv run py.test ./test.py
+
 shell:
-	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
+	pipenv run ipython
 
 run-prod:
 	. ./prod.sh && . ./secrets/.secrets && gunicorn -b localhost:3000 payment.app:app
