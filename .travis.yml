@@ -7,7 +7,7 @@ install:
   - pipenv install
 
 before_script:
-  - . ./local.sh && . ./secrets/.secrets && pipenv run python generate_funding_address.py
+  - . ./local.sh && pipenv run python generate_funding_address.py
 
 script:
   - make test
