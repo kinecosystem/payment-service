@@ -26,3 +26,7 @@ class WalletNotFoundError(BaseError):
 
 class ParseError(ValueError):
     pass
+
+
+class PersitentError(Exception):
+    """an error that shouldn't be retried."""
