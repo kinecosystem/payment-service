@@ -2,7 +2,7 @@ import kin
 from rq import Queue
 import requests
 from . import config
-from .errors import PaymentNotFoundError
+from .errors import PaymentNotFoundError, PersitentError
 from .log import get as get_log
 from .models import Payment, PaymentRequest, WalletRequest, Wallet
 from .utils import retry, lock
@@ -193,6 +193,8 @@ def pay(payment_request: PaymentRequest):
         statsd.inc_count('transaction.paid',
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])
+    except (AccountNotFoundError, AccountNotActivatedError) as e:
+        raise PersitentError(e)
     except Exception as e:
         statsd.increment('transaction.failed',
                          tags=['app_id:%s' % payment_request.app_id])

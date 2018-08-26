@@ -18,7 +18,7 @@ test:
 	. ./local.sh && . ./secrets/.secrets && pipenv run py.test ./test.py
 
 shell:
-	pipenv run ipython
+	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
 
 run-prod:
 	. ./prod.sh && . ./secrets/.secrets && gunicorn -b localhost:3000 payment.app:app
