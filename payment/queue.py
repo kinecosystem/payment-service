@@ -193,7 +193,7 @@ def pay(payment_request: PaymentRequest):
         statsd.inc_count('transaction.paid',
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])
-    except (AccountNotFoundError, AccountNotActivatedError) as e:
+    except (kin.AccountNotFoundError, kin.AccountNotActivatedError) as e:
         raise PersitentError(e)
     except Exception as e:
         statsd.increment('transaction.failed',
