@@ -17,6 +17,7 @@ class config:
     STELLAR_KIN_TOKEN_NAME = os.environ['STELLAR_KIN_TOKEN_NAME']
     OUTPUT_DIR = os.getenv('OUTPUT_DIR', '.')
     AMOUNT = 100000
+    REQ_TIMEOUT = 10
 
 
 def wrap_error(func):
@@ -44,7 +45,8 @@ def trust_kin(private_seed):
 @retry(5, 1)
 def fund_lumens(public_address):
     res = requests.get(config.XLM_FAUCET,
-                       params={'addr': public_address})
+                       params={'addr': public_address},
+                       timeout=config.REQ_TIMEOUT)
     res.raise_for_status()
     return res.json()
 
@@ -54,7 +56,8 @@ def fund_lumens(public_address):
 def fund_kin(public_address):
     res = requests.get(config.KIN_FAUCET + '/fund',
                        params={'account': public_address,
-                               'amount': config.AMOUNT})
+                               'amount': config.AMOUNT},
+                       timeout=config.REQ_TIMEOUT)
     res.raise_for_status()
     return res.json()
 
