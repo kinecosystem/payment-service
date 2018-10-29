@@ -56,7 +56,7 @@ class Blockchain(object):
         log.info('creating wallet', public_address=public_address)
 
         memo = '1-{}'.format(app_id)
-        tx_id = self.write_sdk.create_account(public_address, initial_xlm_amount, memo)
+        tx_id = self.write_sdk.create_account(public_address, initial_xlm_amount, memo, activate=True)
         log.info('create wallet transaction', tx_id=tx_id)
         return tx_id
 
