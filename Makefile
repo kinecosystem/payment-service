@@ -30,7 +30,7 @@ watcher-prod:
 	. ./prod.sh && . ./secrets/.secrets && python3 watcher.py
 
 install-prod:
-	pipenv locki --requirements > requirements.txt
+	pipenv lock --requirements > requirements.txt
 	pip3 install -r requirements.txt
 
 
