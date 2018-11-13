@@ -54,5 +54,12 @@ def get_network_name(network_name):
 def get_network_passphrase(network_name):
     import stellar_base
     if network_name not in stellar_base.network.NETWORKS:
-        return network_name 
+        return network_name
     return stellar_base.network.NETWORKS[network_name]
+
+
+def safe_int(string, default):
+    try:
+        return int(string)
+    except Exception:
+        return default
