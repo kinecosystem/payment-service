@@ -17,3 +17,6 @@ rq = "*"
 hiredis = "*"
 gunicorn = "*"
 datadog = "*"
+
+[requires]
+python_version = "3"

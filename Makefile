@@ -30,7 +30,8 @@ watcher-prod:
 	. ./prod.sh && . ./secrets/.secrets && python3 watcher.py
 
 install-prod:
-	pipenv install --system
+	pipenv lock --requirements > requirements.txt
+	pip3 install -r requirements.txt
 
 
 # docker related
