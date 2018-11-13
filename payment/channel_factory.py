@@ -39,7 +39,7 @@ def top_up(root_wallet: Blockchain, public_address, lower_limit=INITIAL_XLM_AMOU
 @contextlib.contextmanager
 def get_next_channel_id():
     """get the next available channel_id from redis."""
-    max_channels = redis_conn.get('MAX_CHANNELS') or DEFAULT_MAX_CHANNELS
+    max_channels = int(redis_conn.get('MAX_CHANNELS') or DEFAULT_MAX_CHANNELS)
     for i in range(MAX_LOCK_TRIES):
         channel_id = randint(0, max_channels - 1)
         with lock(redis_conn, 'channel:{}'.format(channel_id), blocking_timeout=0) as is_locked:
