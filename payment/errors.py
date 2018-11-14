@@ -30,3 +30,7 @@ class ParseError(ValueError):
 
 class PersitentError(Exception):
     """an error that shouldn't be retried."""
+
+
+class NoAvailableChannel(Exception):
+    """all channels are busy right now. Try later."""

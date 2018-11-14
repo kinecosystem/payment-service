@@ -4,8 +4,10 @@ from random import randint
 from hashlib import sha256
 from kin.sdk import Keypair
 from kin import AccountExistsError
-from .utils import lock
+from .errors import NoAvailableChannel
+from .utils import lock, safe_int
 from . import config
+from .statsd import statsd
 from .redis_conn import redis_conn
 from .blockchain import Blockchain
 from .log import get as get_log
@@ -39,14 +41,21 @@ def top_up(root_wallet: Blockchain, public_address, lower_limit=INITIAL_XLM_AMOU
 @contextlib.contextmanager
 def get_next_channel_id():
     """get the next available channel_id from redis."""
-    max_channels = 100 # int(redis_conn.get('MAX_CHANNELS') or DEFAULT_MAX_CHANNELS)
+    max_channels = safe_int(redis_conn.get('MAX_CHANNELS'), DEFAULT_MAX_CHANNELS)
     for i in range(MAX_LOCK_TRIES):
         channel_id = randint(0, max_channels - 1)
         with lock(redis_conn, 'channel:{}'.format(channel_id), blocking_timeout=0) as is_locked:
             if is_locked:
-                yield channel_id
+                try:
+                    statsd.increment('channel_lock')
+                    start_t = time.time()
+                    yield channel_id
+                finally:
+                    statsd.decrement('channel_lock')
+                    statsd.timing('channel_lock_time', time.time() - start_t)
                 return  # end generator
         time.sleep(SLEEP_BETWEEN_LOCKS)
+    raise NoAvailableChannel()
 
 
 @contextlib.contextmanager
@@ -56,7 +65,7 @@ def get_channel(root_wallet: Blockchain):
         keys = generate_key(root_wallet, channel_id)
         public_address = keys.address().decode()
         try:
-            root_wallet.create_wallet(public_address, MEMO_INIT, INITIAL_XLM_AMOUNT)
+            root_wallet.create_wallet(public_address, MEMO_INIT, INITIAL_XLM_AMOUNT)  # XXX this causes a race-condition
             log.info('# created channel: %s: %s' % (channel_id, public_address))
         except AccountExistsError:
             if top_up(root_wallet, public_address):

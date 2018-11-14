@@ -4,7 +4,7 @@ config.MAX_CHANNELS = 3
 from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
-from payment.utils import lock
+from payment.utils import lock, safe_int
 from payment.models import Payment
 
 
@@ -80,3 +80,9 @@ def test_load_from_redis():
     Payment(p.to_primitive())
     p.save()
     Payment.get('test')
+
+
+def test_safe_int():
+    assert 1 == safe_int('blah', 1)
+    assert 2 == safe_int(2, 1)
+    assert 2 == safe_int('2', 1)
