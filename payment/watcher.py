@@ -80,6 +80,17 @@ def worker(stop_event):
             log.exception('failed watcher iteration')
         statsd.timing('watcher_beat', time.time() - start_t)
         statsd.gauge('watcher_beat.cursor', cursor)
+        report_queue_size()
+
+
+def report_queue_size():
+    try:
+        from rq import Queue
+        from .redis_conn import redis_conn
+        q = Queue(connection=redis_conn)
+        statsd.gauge('queue_size', q.count)
+    except:
+        pass
 
 
 def init():
