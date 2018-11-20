@@ -85,7 +85,7 @@ def worker(stop_event):
 
 def report_queue_size():
     try:
-        from rq import Queue
+        from rq import Queue, Worker
         from .redis_conn import redis_conn
         from collections import Counter
         q = Queue(connection=redis_conn)
