@@ -87,8 +87,13 @@ def report_queue_size():
     try:
         from rq import Queue
         from .redis_conn import redis_conn
+        from collections import Counter
         q = Queue(connection=redis_conn)
         statsd.gauge('queue_size', q.count)
+        ws = Worker.all(connection=redis_conn)
+        states = Counter([i.get_state() for i in ws])
+        for state, num in states.items():
+            statsd.gauge('queue_workers', num, tags=['state:%s' % state])
     except:
         pass
 
