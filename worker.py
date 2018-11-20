@@ -12,7 +12,6 @@ from payment.redis_conn import redis_conn
 
 
 log = get_log()
-q = Queue(connection=redis_conn)
 
 
 def rq_error_handler(job: Job, exc_type, exc_value, traceback):
@@ -23,6 +22,7 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
     if exc_type != PersitentError:
         job.set_status(JobStatus.QUEUED)
         job.exc_info = None
+        q = Queue('low', connection=redis_conn)
         q.enqueue_job(job)
     else:
         statsd.increment('worker_persistent_error', tags=['job:%s' % job.func_name, 'error_type:%s' % exc_type, 'error:%s' % exc_value])
@@ -31,6 +31,6 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
 
 if __name__ == '__main__':
     with Connection():
-        queue_names = ['default']
+        queue_names = ['high', 'medium', 'low', 'default']
         w = Worker(queue_names, connection=redis_conn, exception_handlers=[rq_error_handler])
         w.work()
