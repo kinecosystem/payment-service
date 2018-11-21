@@ -133,10 +133,9 @@ def get_sdk(seed: str) -> Blockchain:
     address = seed_to_address(seed)
 
     # find if this address already was initialized
-    #if address not in _write_sdks:
-    #    _write_sdks[address] = _init(seed)
-    #sdk = _write_sdks[address]
-    sdk = _init(seed)
+    if address not in _write_sdks:
+        _write_sdks[address] = _init(seed)
+    sdk = _write_sdks[address]
 
     with get_channel(root_wallet) as channel:
         channels = [channel]
