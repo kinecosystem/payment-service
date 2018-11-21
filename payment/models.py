@@ -6,6 +6,7 @@ from schematics.types import StringType, IntType, DateTimeType, ListType
 from kin.stellar.horizon_models import TransactionData
 from .errors import PaymentNotFoundError, ParseError
 from .redis_conn import redis_conn
+from redis import WatchError
 
 
 Memo = namedtuple('Memo', ['app_id', 'payment_id'])
@@ -118,6 +119,62 @@ class Payment(ModelWithStr):
         redis_conn.set(self._key(self.id),
                        json.dumps(self.to_primitive()),
                        ex=self.PAY_STORE_TIME)
+
+
+class Service(ModelWithStr):
+    callback = StringType()  # a webhook to call when a payment is complete
+    service_id = StringType()
+
+    @classmethod
+    def _key(cls, service_id):
+        return 'service:%s' % service_id
+
+    @classmethod
+    def _all_services_key(cls):
+        return 'all_services'
+
+    @classmethod
+    def get(cls, service_id):
+        data = redis_conn.get(cls._key(service_id))
+        if not data:
+            return None
+        return cls(json.loads(data.decode('utf8')))
+
+    @classmethod
+    def get_all(cls):
+        return redis.conn.smembers(cls._all_services_key())  # XXX what type returns?
+
+    def save(self):
+        redis_conn.set(self._key(self.service_id), json.dumps(self.to_primitive()))
+        redis_conn.sadd(self._all_services_key(), self.service_id)
+
+    def delete(self):
+        redis_conn.delete(self._key(self.service_id))
+        redis_conn.srem(self._all_services_key(), self.service_id)
+
+    def _service_addresses_key(self):
+        return 'service:%s:addresses' % self.service_id)
+
+    def _service_address_key(self, address):
+        return 'service:%s:address:%s' % (self.service_id, address)
+
+    @retry(5, delay=0) # XXX retry on redis.WatchError
+    def add_watcher(self, address, payment_id):
+        with redis_conn.pipeline(transaction=False) as pipe:
+            pipe.watch(self._service_addresses_key())
+            pipe.multi()
+            pipe.sadd(self._service_address_key(address), payment_id)
+            pipe.sadd(self._service_addresses_key(), address)
+            pipe.execute()
+
+    def delete_watcher(self, address, payment_id):
+        with redis_conn.pipeline(transaction=False) as pipe:
+            pipe.watch(self._service_addresses_key())
+            pipe.srem(self._service_address_key(address), payment_id)
+            if pipe.smembers(self._service_address_key(address)) == 0:
+                pipe.multi()
+                pipe.srem(self._service_addresses_key(), address)
+            pipe.execute()
 
 
 class Watcher(ModelWithStr):

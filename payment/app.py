@@ -4,7 +4,7 @@ from .log import init as init_log
 log = init_log()
 from flask import Flask, request, jsonify
 from .transaction_flow import TransactionFlow
-from .errors import AlreadyExistsError, PaymentNotFoundError
+from .errors import AlreadyExistsError, PaymentNotFoundError, ServiceNotFoundError
 from .middleware import handle_errors
 from .models import Payment, WalletRequest, PaymentRequest, Watcher
 from .queue import enqueue_create_wallet, enqueue_send_payment
@@ -65,6 +65,39 @@ def pay():
 
     enqueue_send_payment(payment)
     return jsonify(), 201
+
+@app.route('/services/<service_id>', methods=['PUT', 'DELETE'])
+@handle_errors
+def add_delete_service(service_id):
+    body = request.get_json()
+    service = Service.get(service_id)
+    if request.method == 'DELETE':
+        if not service:
+            raise ServiceNotFoundError('didnt find service %s' % service_id) 
+        service.delete()
+    else:
+        body['service_id'] = service_id
+        service = Service(body)
+        service.save()
+
+    return jsonify(service.to_primitive())
+
+@app.route('/services/<service_id>/watchers/<address>/payments/<payment_id>', methods=['DELETE', 'PUT'])
+@handle_errors
+def add_delete_address_watcher(service_id, address, payment_id):
+    service = Service.get(service_id)
+    if not service:
+        raise ServiceNotFoundError('didnt find service %s' % service_id) 
+
+    if request.method == 'PUT':
+        watcher = service.add_watcher(address, payment_id)
+        log.info('added watcher', watcher=watcher)
+    else:
+        watcher = service.delete_watcher(address, payment_id)
+        log.info('deleted watcher', watcher=watcher)
+
+    return jsonify(watcher.to_primitive())
+
 
 
 @app.route('/watchers/<service_id>', methods=['PUT', 'POST'])
