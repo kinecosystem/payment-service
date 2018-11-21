@@ -66,6 +66,7 @@ def pay():
     enqueue_send_payment(payment)
     return jsonify(), 201
 
+
 @app.route('/services/<service_id>', methods=['PUT', 'DELETE'])
 @handle_errors
 def add_delete_service(service_id):
@@ -82,6 +83,7 @@ def add_delete_service(service_id):
 
     return jsonify(service.to_primitive())
 
+
 @app.route('/services/<service_id>/watchers/<address>/payments/<payment_id>', methods=['DELETE', 'PUT'])
 @handle_errors
 def add_delete_address_watcher(service_id, address, payment_id):
@@ -90,14 +92,13 @@ def add_delete_address_watcher(service_id, address, payment_id):
         raise ServiceNotFoundError('didnt find service %s' % service_id) 
 
     if request.method == 'PUT':
-        watcher = service.add_watcher(address, payment_id)
+        service.add_watcher(address, payment_id)
         log.info('added watcher', watcher=watcher)
     else:
-        watcher = service.delete_watcher(address, payment_id)
+        service.delete_watcher(address, payment_id)
         log.info('deleted watcher', watcher=watcher)
 
-    return jsonify(watcher.to_primitive())
-
+    return jsonify({})
 
 
 @app.route('/watchers/<service_id>', methods=['PUT', 'POST'])

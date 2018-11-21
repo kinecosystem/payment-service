@@ -5,7 +5,7 @@ from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
 from payment.utils import lock, safe_int
-from payment.models import Payment
+from payment.models import Payment, Service
 
 
 def test_lock():
@@ -80,6 +80,24 @@ def test_load_from_redis():
     Payment(p.to_primitive())
     p.save()
     Payment.get('test')
+
+
+def test_watching():
+    service = Service({'service_id': 'my_service', 'callback': 'my_callback'})
+    service.save()
+
+    service.add_watcher('address:1', 'pay:1')
+    service.add_watcher('address:1', 'pay:2')
+    service.add_watcher('address:1', 'pay:3')
+    assert Service.get_all_watching_addresses() == {'address:1'}
+    service.add_watcher('address:2', 'pay:4')
+    assert Service.get_all_watching_addresses() == {'address:1', 'address:2'}
+    service.delete_watcher('address:1', 'pay:3')
+    service.delete_watcher('address:2', 'pay:4')
+    assert Service.get_all_watching_addresses() == {'address:1'}
+    service.delete_watcher('address:1', 'pay:2')
+    service.delete_watcher('address:1', 'pay:1')
+    assert Service.get_all_watching_addresses() == set() 
 
 
 def test_safe_int():
