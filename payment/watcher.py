@@ -41,16 +41,7 @@ def on_payment(address, payment):
 
 
 def get_watching_addresses():
-    """
-    get a dict of address => watchers
-    """
-    addresses = {}
-    for watcher in Watcher.get_all():
-        for address in watcher.wallet_addresses:
-            if address not in addresses:
-                addresses[address] = []
-            addresses[address].append(watcher)
-    return addresses
+    return Watcher.get_all_watching_addresses()
 
 
 def worker(stop_event):

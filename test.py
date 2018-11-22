@@ -1,6 +1,8 @@
+import pytest
 import time
-from payment import config
-config.MAX_CHANNELS = 3
+from payment.app import app
+from payment import config; config.MAX_CHANNELS = 3
+
 from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
@@ -71,8 +73,8 @@ def test_generate_channels():
 
 
 def test_load_from_redis():
-    p = Payment({'id': 'test', 
-                 'app_id': 'test', 
+    p = Payment({'id': 'test',
+                 'app_id': 'test',
                  'transaction_id': 'test',
                  'recipient_address': 'test',
                  'sender_address': 'test',
@@ -82,25 +84,55 @@ def test_load_from_redis():
     Payment.get('test')
 
 
+def test_status(client):
+    res = client.get('/status')
+    assert res.json['app_name'] == 'payment-service'
+
+
 def test_watching():
-    service = Service({'service_id': 'my_service', 'callback': 'my_callback'})
+    service = Service({
+        'service_id': 'my_service',
+        'callback': 'my_callback',
+        'wallet_addresses': [],
+    })
     service.save()
 
-    service.add_watcher('address:1', 'pay:1')
-    service.add_watcher('address:1', 'pay:2')
-    service.add_watcher('address:1', 'pay:3')
-    assert Service.get_all_watching_addresses() == {'address:1'}
-    service.add_watcher('address:2', 'pay:4')
-    assert Service.get_all_watching_addresses() == {'address:1', 'address:2'}
-    service.delete_watcher('address:1', 'pay:3')
-    service.delete_watcher('address:2', 'pay:4')
-    assert Service.get_all_watching_addresses() == {'address:1'}
-    service.delete_watcher('address:1', 'pay:2')
-    service.delete_watcher('address:1', 'pay:1')
-    assert Service.get_all_watching_addresses() == set() 
+    service.watch_payment('address-1', 'pay-1')
+    service.watch_payment('address-1', 'pay-2')
+    service.watch_payment('address-1', 'pay-3')
+    assert Service.get_all_watching_addresses() == {'address-1'}
+    service.watch_payment('address-2', 'pay-4')
+    assert Service.get_all_watching_addresses() == {'address-1', 'address-2'}
+    service.unwatch_payment('address-1', 'pay-3')
+    service.unwatch_payment('address-2', 'pay-4')
+    assert Service.get_all_watching_addresses() == {'address-1'}
+    service.unwatch_payment('address-1', 'pay-2')
+    service.unwatch_payment('address-1', 'pay-1')
+    assert Service.get_all_watching_addresses() == set()
+    service.delete()
 
 
 def test_safe_int():
     assert 1 == safe_int('blah', 1)
     assert 2 == safe_int(2, 1)
     assert 2 == safe_int('2', 1)
+
+
+def test_old_new_watchers(client):
+    client.put('/watchers/my_service', json={'callback': 'my_callback', 'wallet_addresses': ['old-1', 'old-2']})
+    client.put('/services/my_service', json={'callback': 'my_callback', 'wallet_addresses': ['old-1', 'old-2']})
+    client.put('/services/my_service/watchers/address-1/payments/pay-1')
+    client.put('/services/my_service/watchers/address-1/payments/pay-2')
+    client.put('/services/my_service/watchers/address-2/payments/pay-3')
+
+    res = client.get('/watchers')
+    raise Exception(res.json)
+
+
+
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    client = app.test_client()
+
+    yield client
