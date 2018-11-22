@@ -11,6 +11,7 @@ from .log import get as get_logger
 
 log = get_logger()
 Memo = namedtuple('Memo', ['app_id', 'payment_id'])
+ADDRESS_EXP_SECS = 5 * 60
 
 
 class ModelWithStr(Model):
@@ -148,8 +149,7 @@ class Service(ModelWithStr):
                 for service_id
                 in redis_conn.smembers(cls._all_services_key())]  # XXX what type returns?
 
-    @classmethod
-    def get_all_temp_watching_addresses(cls, service_id):
+    def _get_all_temp_watching_addresses(self):
         def address_from_key(key):
             try:
                 return key.decode('utf8').rsplit(':', 1)[-1]
@@ -159,18 +159,38 @@ class Service(ModelWithStr):
         # first get the time limited addresses
         return set(address_from_key(key)
                    for key
-                   in redis_conn.keys('service:%s:address:*' % service_id))
+                   in redis_conn.keys('service:%s:address:*' % self.service_id))
+
+    def _get_all_watching_addresses(self):
+        """return set of all watching addresses."""
+        return self._get_all_temp_watching_addresses() | set(self.wallet_addresses)
 
     @classmethod
     def get_all_watching_addresses(cls):
         """get all addresses watched by any service as map of address to list of services watching it."""
         addresses = {}
         for service in cls.get_all():
-            all_addresses = cls.get_all_temp_watching_addresses(service.service_id) | set(service.wallet_addresses)
-            for address in all_addresses:
+            service_addresses = service._get_all_watching_addresses()
+            for address in service_addresses:
                 if address not in addresses:
                     addresses[address] = []
                 addresses[address].append(service)
+
+        return addresses
+
+    @classmethod
+    def get_all_watching_addresses_inc_old(cls):
+        """return list of address=>list of callbacks."""
+        addresses = {}
+        for address, watchers in Watcher.get_all_watching_addresses().items():
+            if address not in addresses:
+                addresses[address] = []
+            addresses[address] = list(set(addresses[address]) | set([w.callback for w in watchers]))
+
+        for address, services in Service.get_all_watching_addresses().items():
+            if address not in addresses:
+                addresses[address] = []
+            addresses[address] = list(set(addresses[address]) | set([s.callback for s in services]))
 
         return addresses
 
@@ -181,30 +201,19 @@ class Service(ModelWithStr):
     def delete(self):
         redis_conn.delete(self._key(self.service_id))
         redis_conn.srem(self._all_services_key(), self.service_id)
-        for address in self.get_all_temp_watching_addresses(self.service_id):
-            self.delete_watching_address(address)
 
     def _address_payments_key(self, address):
         return 'service:%s:address:%s' % (self.service_id, address)
 
     def watch_payment(self, address, payment_id):
         """start looking for payment_id on given address."""
-        ADDRESS_EXP_SECS = 5 * 60
+        # ignoring payment_id
         key = self._address_payments_key(address)
-        with redis_conn.pipeline(transaction=False) as pipe:
-            pipe.multi()
-            pipe.sadd(key, payment_id)
-            pipe.expire(key, ADDRESS_EXP_SECS)
-            pipe.execute()
+        redis_conn.set(key, address, ADDRESS_EXP_SECS)
 
     def unwatch_payment(self, address, payment_id):
-        """remove payment_id from watching list for given address."""
-        key = self._address_payments_key(address)
-        redis_conn.srem(key, payment_id)
-
-    def delete_watching_address(self, address):
-        key = self._address_payments_key(address)
-        redis_conn.delete(key)
+        # ignoring payment_id
+        return
 
 
 class Watcher(ModelWithStr):

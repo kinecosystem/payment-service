@@ -112,7 +112,7 @@ def get_watchers():
     for address, services in Service.get_all_watching_addresses().items():
         new[address] = [[s.service_id, s.callback] for s in services]
 
-    return jsonify({'old': old, 'new': new})
+    return jsonify({'old': old, 'new': new, 'all': Service.get_all_watching_addresses_inc_old()})
 
 @app.route('/watchers/<service_id>', methods=['PUT', 'POST'])
 @handle_errors

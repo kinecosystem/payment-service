@@ -17,6 +17,7 @@ rq = "*"
 hiredis = "*"
 gunicorn = "*"
 datadog = "*"
+mock = "*"
 
 [requires]
 python_version = "3"
