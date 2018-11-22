@@ -60,6 +60,12 @@ class Blockchain(object):
         log.info('create wallet transaction', tx_id=tx_id)
         return tx_id
 
+    def send_native(self, public_address: str, amount: int, app_id: str)
+        memo = '1-{}'.format(app_id)
+        tx_id = self.write_sdk.send_native(public_address, initial_xlm_amount, memo)
+        log.info('send native transaction', tx_id=tx_id)
+        return tx_id
+
     def pay_to(self, public_address: str, amount: int, app_id: str, payment_id: str) -> Payment:
         """send kins to an address."""
         log.info('sending kin to', address=public_address)
