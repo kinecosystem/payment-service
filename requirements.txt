@@ -7,11 +7,13 @@ decorator==4.3.0
 flask==1.0.2
 git+https://github.com/kinecosystem/kin-core-python.git@2e2997f096c6ae9e017a31a56a8a7cc3ff9d1760#egg=kin
 gunicorn==19.9.0
-hiredis==0.2.0
+hiredis==0.3.0
 idna==2.7
 itsdangerous==1.1.0
 jinja2==2.10
 markupsafe==1.1.0
+mock==2.0.0
+pbr==5.1.1
 redis==2.10.6
 requests==2.20.1
 rq==0.12.0
