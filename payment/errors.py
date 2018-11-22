@@ -23,6 +23,9 @@ class WalletNotFoundError(BaseError):
     http_code = 404
     code = 4042
 
+class ServiceNotFoundError(BaseError):
+    http_code = 404
+    code = 4043
 
 class ParseError(ValueError):
     pass

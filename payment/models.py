@@ -6,9 +6,12 @@ from schematics.types import StringType, IntType, DateTimeType, ListType
 from kin.stellar.horizon_models import TransactionData
 from .errors import PaymentNotFoundError, ParseError
 from .redis_conn import redis_conn
+from .utils import retry
+from .log import get as get_logger
 
-
+log = get_logger()
 Memo = namedtuple('Memo', ['app_id', 'payment_id'])
+ADDRESS_EXP_SECS = 60 * 60  # one hour
 
 
 class ModelWithStr(Model):
@@ -120,6 +123,99 @@ class Payment(ModelWithStr):
                        ex=self.PAY_STORE_TIME)
 
 
+class Service(ModelWithStr):
+    callback = StringType()  # a webhook to call when a payment is complete
+    service_id = StringType()
+    wallet_addresses = ListType(StringType)  # permanent addresses
+
+    @classmethod
+    def _key(cls, service_id):
+        return 'service:%s' % service_id
+
+    @classmethod
+    def _all_services_key(cls):
+        return 'all_services'
+
+    @classmethod
+    def get(cls, service_id):
+        data = redis_conn.get(cls._key(service_id))
+        if not data:
+            return None
+        return cls(json.loads(data.decode('utf8')))
+
+    @classmethod
+    def get_all(cls):
+        return [cls.get(service_id.decode('utf8'))
+                for service_id
+                in redis_conn.smembers(cls._all_services_key())]  # XXX what type returns?
+
+    def _get_all_temp_watching_addresses(self):
+        def address_from_key(key):
+            try:
+                return key.decode('utf8').rsplit(':', 1)[-1]
+            except:
+                log.exception('failed address_from_key %s' % key)
+
+        # first get the time limited addresses
+        return set(address_from_key(key)
+                   for key
+                   in redis_conn.keys('service:%s:address:*' % self.service_id))
+
+    def _get_all_watching_addresses(self):
+        """return set of all watching addresses."""
+        return self._get_all_temp_watching_addresses() | set(self.wallet_addresses)
+
+    @classmethod
+    def get_all_watching_addresses(cls):
+        """get all addresses watched by any service as map of address to list of services watching it."""
+        addresses = {}
+        for service in cls.get_all():
+            service_addresses = service._get_all_watching_addresses()
+            for address in service_addresses:
+                if address not in addresses:
+                    addresses[address] = []
+                addresses[address].append(service)
+
+        return addresses
+
+    @classmethod
+    def get_all_watching_addresses_inc_old(cls):
+        """return list of address=>list of callbacks."""
+        addresses = {}
+        for address, watchers in Watcher.get_all_watching_addresses().items():
+            if address not in addresses:
+                addresses[address] = []
+            addresses[address] = list(set(addresses[address]) | set([w.callback for w in watchers]))
+
+        for address, services in Service.get_all_watching_addresses().items():
+            if address not in addresses:
+                addresses[address] = []
+            addresses[address] = list(set(addresses[address]) | set([s.callback for s in services]))
+
+        return addresses
+
+    def save(self):
+        redis_conn.set(self._key(self.service_id), json.dumps(self.to_primitive()))
+        redis_conn.sadd(self._all_services_key(), self.service_id)
+
+    def delete(self):
+        redis_conn.delete(self._key(self.service_id))
+        redis_conn.srem(self._all_services_key(), self.service_id)
+
+    def _address_payments_key(self, address):
+        return 'service:%s:address:%s' % (self.service_id, address)
+
+    def watch_payment(self, address, payment_id):
+        """start looking for payment_id on given address."""
+        # ignoring payment_id
+        key = self._address_payments_key(address)
+        redis_conn.set(key, address, ADDRESS_EXP_SECS)
+
+    def unwatch_payment(self, address, payment_id):
+        # ignoring payment_id
+        return
+
+
 class Watcher(ModelWithStr):
     wallet_addresses = ListType(StringType)
     callback = StringType()  # a webhook to call when a payment is complete
@@ -148,6 +244,17 @@ class Watcher(ModelWithStr):
         data = redis_conn.hgetall(cls._key()).values()
 
         return [Watcher(json.loads(w.decode('utf8'))) for w in data]
+
+    @classmethod
+    def get_all_watching_addresses(cls):
+        """get a dict of address => watchers"""
+        addresses = {}
+        for watcher in cls.get_all():
+            for address in watcher.wallet_addresses:
+                if address not in addresses:
+                    addresses[address] = []
+                addresses[address].append(watcher)
+        return addresses
 
     @classmethod
     def get_subscribed(cls, address):
@@ -180,4 +287,3 @@ class CursorManager:
     @classmethod
     def _key(cls):
         return 'cursor'
-

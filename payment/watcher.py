@@ -4,7 +4,7 @@ import time
 from .blockchain import Blockchain
 from .queue import enqueue_payment_callback
 from .log import get as get_log
-from .models import Watcher, CursorManager
+from .models import Service, CursorManager
 from .transaction_flow import TransactionFlow
 from .utils import retry
 from .statsd import statsd
@@ -28,7 +28,7 @@ def get_last_cursor():
     return cursor
 
 
-def on_payment(address, payment):
+def on_payment(address, callbacks, payment):
     """handle a new payment from an address."""
     log.info('got payment', address=address, payment=payment)
     statsd.inc_count('payment_observed',
@@ -36,21 +36,8 @@ def on_payment(address, payment):
                      tags=['app_id:%s' % payment.app_id,
                            'address:%s' % address])
 
-    for watcher in Watcher.get_subscribed(address):
-        enqueue_payment_callback(watcher.callback, address, payment)
-
-
-def get_watching_addresses():
-    """
-    get a dict of address => watchers
-    """
-    addresses = {}
-    for watcher in Watcher.get_all():
-        for address in watcher.wallet_addresses:
-            if address not in addresses:
-                addresses[address] = []
-            addresses[address].append(watcher)
-    return addresses
+    for callback in callbacks:
+        enqueue_payment_callback(callback, address, payment)
 
 
 def worker(stop_event):
@@ -60,16 +47,17 @@ def worker(stop_event):
         time.sleep(SEC_BETWEEN_RUNS)
         start_t = time.time()
         try:
-            addresses = get_watching_addresses()
+            # dict(address => [list of callbacks])
+            addresses_callbacks = Service.get_all_watching_addresses_inc_old()
 
             cursor = get_last_cursor()
             log.debug('got last cursor %s' % cursor)
             flow = TransactionFlow(cursor)
-            for address, tx in flow.get_transactions(addresses):
+            for address, tx in flow.get_transactions(addresses_callbacks.keys()):
                 log.info('found transaction for address', address=address)
                 payment = Blockchain.try_parse_payment(tx)
                 if payment:
-                    on_payment(address, payment)
+                    on_payment(address, addresses_callbacks[address], payment)
                 cursor = CursorManager.save(tx.paging_token)
             log.debug('save last cursor %s' % flow.cursor)
             # flow.cursor is the last block observed - it might not be a kin payment, 

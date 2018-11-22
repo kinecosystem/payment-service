@@ -1,11 +1,15 @@
+import pytest
 import time
-from payment import config
-config.MAX_CHANNELS = 3
+import random
+import mock
+from payment.app import app
+from payment import config; config.MAX_CHANNELS = 3
+
 from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
 from payment.utils import lock, safe_int
-from payment.models import Payment
+from payment.models import Payment, Service
 
 
 def test_lock():
@@ -71,8 +75,8 @@ def test_generate_channels():
 
 
 def test_load_from_redis():
-    p = Payment({'id': 'test', 
-                 'app_id': 'test', 
+    p = Payment({'id': 'test',
+                 'app_id': 'test',
                  'transaction_id': 'test',
                  'recipient_address': 'test',
                  'sender_address': 'test',
@@ -82,7 +86,52 @@ def test_load_from_redis():
     Payment.get('test')
 
 
+def test_status(client):
+    res = client.get('/status')
+    assert res.json['app_name'] == 'payment-service'
+
+
+def test_watching():
+    with mock.patch('payment.models.ADDRESS_EXP_SECS', 1):
+        service = Service({
+            'service_id': 'my_service:%s' % random.random(),
+            'callback': 'my_callback',
+            'wallet_addresses': [],
+        })
+        service.save()
+
+        service.watch_payment('address-1', 'pay-1')
+        service.watch_payment('address-1', 'pay-2')
+        service.watch_payment('address-1', 'pay-3')
+        assert service._get_all_watching_addresses() == {'address-1'}
+        service.watch_payment('address-2', 'pay-4')
+        assert service._get_all_watching_addresses() == {'address-1', 'address-2'}
+        time.sleep(1.1)
+        assert service._get_all_watching_addresses() == set()
+        service.delete()
+
+
 def test_safe_int():
     assert 1 == safe_int('blah', 1)
     assert 2 == safe_int(2, 1)
     assert 2 == safe_int('2', 1)
+
+
+def test_old_new_watchers(client):
+    service = 'my_service:%s' % random.random()
+    client.put('/watchers/%s' % service, json={'callback': 'my_callback', 'wallet_addresses': ['old-1', 'old-2']})
+    client.put('/services/%s' % service, json={'callback': 'my_callback', 'wallet_addresses': ['perm-1', 'perm-2']})
+    client.put('/services/%s/watchers/temp-1/payments/pay-1' % service)
+    client.put('/services/%s/watchers/temp-1/payments/pay-2' % service)
+    client.put('/services/%s/watchers/temp-2/payments/pay-3' % service)
+
+    res = client.get('/watchers')
+    assert set(['old-1', 'old-2', 'perm-1', 'perm-2', 'temp-1', 'temp-2']) - set(res.json['all'].keys()) == set()
+
+
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    client = app.test_client()
+
+    yield client

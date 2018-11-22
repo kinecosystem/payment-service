@@ -4,9 +4,9 @@ from .log import init as init_log
 log = init_log()
 from flask import Flask, request, jsonify
 from .transaction_flow import TransactionFlow
-from .errors import AlreadyExistsError, PaymentNotFoundError
+from .errors import AlreadyExistsError, PaymentNotFoundError, ServiceNotFoundError
 from .middleware import handle_errors
-from .models import Payment, WalletRequest, PaymentRequest, Watcher
+from .models import Payment, WalletRequest, PaymentRequest, Watcher, Service
 from .queue import enqueue_create_wallet, enqueue_send_payment
 from .utils import get_network_passphrase
 from .blockchain import Blockchain
@@ -66,6 +66,53 @@ def pay():
     enqueue_send_payment(payment)
     return jsonify(), 201
 
+
+@app.route('/services/<service_id>', methods=['PUT', 'DELETE'])
+@handle_errors
+def add_delete_service(service_id):
+    body = request.get_json()
+    if request.method == 'DELETE':
+        service = Service.get(service_id)
+        if not service:
+            raise ServiceNotFoundError('didnt find service %s' % service_id) 
+        service.delete()
+    else:
+        body['service_id'] = service_id
+        service = Service(body)
+        service.save()
+
+    return jsonify(service.to_primitive())
+
+
+@app.route('/services/<service_id>/watchers/<address>/payments/<payment_id>', methods=['DELETE', 'PUT'])
+@handle_errors
+def add_delete_address_watcher(service_id, address, payment_id):
+    service = Service.get(service_id)
+    if not service:
+        raise ServiceNotFoundError('didnt find service %s' % service_id) 
+
+    if request.method == 'PUT':
+        service.watch_payment(address, payment_id)
+        log.info('added watcher', address=address)
+    else:
+        service.unwatch_payment(address, payment_id)
+        log.info('deleted watcher', address=address)
+
+    return jsonify({})
+
+
+@app.route('/watchers', methods=['GET'])
+@handle_errors
+def get_watchers():
+    old = {}
+    for address, watchers in Watcher.get_all_watching_addresses().items():
+        old[address] = [[w.service_id, w.callback] for w in watchers]
+
+    new = {}
+    for address, services in Service.get_all_watching_addresses().items():
+        new[address] = [[s.service_id, s.callback] for s in services]
+
+    return jsonify({'old': old, 'new': new, 'all': Service.get_all_watching_addresses_inc_old()})
 
 @app.route('/watchers/<service_id>', methods=['PUT', 'POST'])
 @handle_errors
