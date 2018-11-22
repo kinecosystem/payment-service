@@ -11,7 +11,7 @@ from .log import get as get_logger
 
 log = get_logger()
 Memo = namedtuple('Memo', ['app_id', 'payment_id'])
-ADDRESS_EXP_SECS = 5 * 60
+ADDRESS_EXP_SECS = 60 * 60  # one hour
 
 
 class ModelWithStr(Model):
