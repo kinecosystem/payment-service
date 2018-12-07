@@ -11,7 +11,10 @@ from .statsd import statsd
 from .blockchain import Blockchain, get_sdk
 
 
-q = Queue(connection=redis_conn)
+q_low = Queue('low', connection=redis_conn)
+q_med = Queue('medium', connection=redis_conn)
+q_high = Queue('high', connection=redis_conn)
+
 log = get_log()
 
 
@@ -19,7 +22,7 @@ def enqueue_send_payment(payment_request: PaymentRequest):
     statsd.inc_count('transaction.enqueue',
                      payment_request.amount,
                      tags=['app_id:%s' % payment_request.app_id])
-    result = q.enqueue(pay_and_callback, payment_request.to_primitive())
+    result = q_high.enqueue(pay_and_callback, payment_request.to_primitive())
     log.info('enqueue result', result=result, payment_request=payment_request)
 
 
@@ -27,7 +30,7 @@ def enqueue_create_wallet(wallet_request: WalletRequest):
     statsd.increment('wallet_creation.enqueue',
                      tags=['app_id:%s' % wallet_request.app_id])
 
-    result = q.enqueue(create_wallet_and_callback, wallet_request.to_primitive())
+    result = q_low.enqueue(create_wallet_and_callback, wallet_request.to_primitive())
     log.info('enqueue result', result=result, wallet_request=wallet_request)
 
 
@@ -38,7 +41,7 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
                            'state:%s' % state,
                            'action:%s' % action])
 
-    result = q.enqueue(call_callback,
+    result = q_med.enqueue(call_callback,
                        callback,
                        app_id,
                        objekt=objekt,
@@ -49,7 +52,7 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
 
 
 def enqueue_report_wallet_balance(root_wallet_address, channel_wallet_addresses):
-    q.enqueue(
+    q_low.enqueue(
         report_balance,
         root_wallet_address,
         channel_wallet_addresses)
