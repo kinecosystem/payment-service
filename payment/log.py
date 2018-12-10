@@ -67,4 +67,4 @@ def init():
 
 def get(name=__name__):
     """Return a structlog."""
-    return wrap_logger(logging.getLogger('payment.' + name)).bind()
+    return wrap_logger(logging.getLogger(name)).bind()

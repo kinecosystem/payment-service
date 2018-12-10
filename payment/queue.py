@@ -12,7 +12,7 @@ from .blockchain import Blockchain, get_sdk
 
 
 q = Queue(connection=redis_conn)
-log = get_log()
+log = get_log('rq.worker')
 
 
 def enqueue_send_payment(payment_request: PaymentRequest):
