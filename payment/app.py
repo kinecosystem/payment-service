@@ -19,6 +19,7 @@ app = Flask(__name__)
 @handle_errors
 def create_wallet():
     body = WalletRequest(request.get_json())
+    body.validate()
 
     # wallet creation is idempotent - no locking needed
     enqueue_create_wallet(body)
@@ -57,6 +58,7 @@ def get_payment(payment_id):
 @handle_errors
 def pay():
     payment = PaymentRequest(request.get_json())
+    payment.validate()
     try:
         Payment.get(payment.id)
         raise AlreadyExistsError('payment already exists')

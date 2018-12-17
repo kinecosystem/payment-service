@@ -23,10 +23,10 @@ class ModelWithStr(Model):
 
 
 class WalletRequest(ModelWithStr):
-    wallet_address = StringType()
-    app_id = StringType()
-    id = StringType()
-    callback = StringType()  # a webhook to call when a wallet creation is complete
+    wallet_address = StringType(required=True)
+    app_id = StringType(required=True)
+    id = StringType(required=True)
+    callback = StringType(required=True)  # a webhook to call when a wallet creation is complete
     # XXX validate should raise 400 error
 
 
@@ -52,11 +52,11 @@ class Wallet(ModelWithStr):
 
 
 class PaymentRequest(ModelWithStr):
-    amount = IntType()
-    app_id = StringType()
-    recipient_address = StringType()
-    id = StringType()
-    callback = StringType()  # a webhook to call when a payment is complete
+    amount = IntType(required=True)
+    app_id = StringType(required=True)
+    recipient_address = StringType(required=True)
+    id = StringType(required=True)
+    callback = StringType(required=True)  # a webhook to call when a payment is complete
 
 
 class Payment(ModelWithStr):
