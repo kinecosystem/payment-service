@@ -7,7 +7,7 @@ python:
 
 install:
   - pip install -U pip pipenv virtualenv
-  - pipenv install
+  - pipenv install --dev
 
 before_script:
   - . ./local.sh && OUTPUT_DIR=./secrets pipenv run python generate_funding_address.py
