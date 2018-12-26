@@ -5,6 +5,10 @@ services:
 python:
   - "3.6"
 
+env:
+  global:
+    - PIPENV_IGNORE_VIRTUALENVS=1
+
 install:
   - pip install -U pip pipenv virtualenv
   - pipenv install
