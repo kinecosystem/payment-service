@@ -1,8 +1,9 @@
 language: python
 services:
   - redis-server
+
 python:
-  - "3.6"
+  - "3.7"
 
 install:
   - pip install -U pip pipenv virtualenv
@@ -13,3 +14,16 @@ before_script:
 
 script:
   - make test
+
+after_success:
+  - pipenv run codecov
+
+branches:
+  only:
+    - master
+
+deploy:
+  provider: script
+  script: echo "pushing docker image" # && docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" && make build-image push-image
+  on:
+    branch: master
