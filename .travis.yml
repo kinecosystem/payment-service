@@ -13,7 +13,7 @@ before_script:
   - . ./local.sh && OUTPUT_DIR=./secrets pipenv run python generate_funding_address.py
 
 script:
-  - make test
+  - make test-cov
 
 after_success:
   - pipenv run codecov

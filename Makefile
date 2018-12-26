@@ -17,6 +17,9 @@ watcher:
 test:
 	. ./local.sh && . ./secrets/.secrets && pipenv run py.test ./test.py
 
+test-cov:
+	. ./local.sh && . ./secrets/.secrets && pipenv run coverage run -m pytest ./test.py
+
 shell:
 	. ./local.sh && . ./secrets/.secrets && pipenv run ipython
 
