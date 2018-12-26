@@ -9,6 +9,7 @@ pytest = "*"
 codecov = "*"
 mypy = "*"
 mock = "*"
+coverage = "*"
 
 [packages]
 flask = "*"
