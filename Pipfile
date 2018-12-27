@@ -9,6 +9,8 @@ pytest = "*"
 codecov = "*"
 mypy = "*"
 mock = "*"
+coverage = "*"
+pytest-cov = "*"
 
 [packages]
 flask = "*"
@@ -16,9 +18,9 @@ schematics = "*"
 structlog = "*"
 requests = "*"
 kin = {git = "https://github.com/kinecosystem/kin-core-python.git", ref = "2e2997f"}
-rq = "*"
+rq = "==0.12.0"
 redis = "==2.10.6"
-hiredis = "*"
+hiredis = "==0.3.0"
 gunicorn = "*"
 datadog = "*"
 

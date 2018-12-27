@@ -53,6 +53,7 @@ def test_generate_channels():
     if not records:
         print('no records')
     else:
+        print('got records', records)
         print('wallet: ', Blockchain.get_wallet(records[0].from_address))
 
     with get_sdk(config.STELLAR_BASE_SEED) as bc1:
