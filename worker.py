@@ -1,5 +1,6 @@
   #!/usr/bin/env python
 import sys
+from uuid import uuid4
 from rq import Connection, Worker, Queue
 from rq.job import Job, JobStatus
 
@@ -32,5 +33,6 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
 if __name__ == '__main__':
     with Connection():
         queue_names = ['default']
-        w = Worker(queue_names, connection=redis_conn, exception_handlers=[rq_error_handler])
+        worker_name = uuid4()
+        w = Worker(queue_names, name=worker_name, connection=redis_conn, exception_handlers=[rq_error_handler])
         w.work()
