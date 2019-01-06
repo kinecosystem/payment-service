@@ -33,6 +33,6 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
 if __name__ == '__main__':
     with Connection():
         queue_names = ['default']
-        worker_name = uuid4()
+        worker_name = str(uuid4())
         w = Worker(queue_names, name=worker_name, connection=redis_conn, exception_handlers=[rq_error_handler])
         w.work()
