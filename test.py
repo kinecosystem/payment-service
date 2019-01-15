@@ -120,14 +120,13 @@ def test_safe_int():
 
 def test_old_new_watchers(client):
     service = 'my_service:%s' % random.random()
-    client.put('/watchers/%s' % service, json={'callback': 'my_callback', 'wallet_addresses': ['old-1', 'old-2']})
     client.put('/services/%s' % service, json={'callback': 'my_callback', 'wallet_addresses': ['perm-1', 'perm-2']})
     client.put('/services/%s/watchers/temp-1/payments/pay-1' % service)
     client.put('/services/%s/watchers/temp-1/payments/pay-2' % service)
     client.put('/services/%s/watchers/temp-2/payments/pay-3' % service)
 
     res = client.get('/watchers')
-    assert set(['old-1', 'old-2', 'perm-1', 'perm-2', 'temp-1', 'temp-2']) - set(res.json['all'].keys()) == set()
+    assert set(['perm-1', 'perm-2', 'temp-1', 'temp-2']) - set(res.json['watchers'].keys()) == set()
 
 
 @pytest.fixture
