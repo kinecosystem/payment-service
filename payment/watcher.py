@@ -1,10 +1,11 @@
 import threading
 import time
+import typing
 
 from .blockchain import Blockchain
 from .queue import enqueue_payment_callback
 from .log import get as get_log
-from .models import Service, CursorManager
+from .models import Service, CursorManager, Payment
 from .transaction_flow import TransactionFlow
 from .utils import retry
 from .statsd import statsd
@@ -28,7 +29,7 @@ def get_last_cursor():
     return cursor
 
 
-def on_payment(address, callbacks, payment):
+def on_payment(address: str, services: typing.List[Service], payment: Payment):
     """handle a new payment from an address."""
     log.info('got payment', address=address, payment=payment)
     statsd.inc_count('payment_observed',
@@ -36,8 +37,8 @@ def on_payment(address, callbacks, payment):
                      tags=['app_id:%s' % payment.app_id,
                            'address:%s' % address])
 
-    for callback in callbacks:
-        enqueue_payment_callback(callback, address, payment)
+    for service in services:
+        enqueue_payment_callback(service.callback, address, payment)
 
 
 def worker(stop_event):
@@ -47,8 +48,8 @@ def worker(stop_event):
         time.sleep(SEC_BETWEEN_RUNS)
         start_t = time.time()
         try:
-            # dict(address => [list of callbacks])
-            addresses_callbacks = Service.get_all_watching_addresses_inc_old()
+            # dict(address => [list of services])
+            addresses_callbacks = Service.get_all_watching_addresses()
 
             cursor = get_last_cursor()
             log.debug('got last cursor %s' % cursor)

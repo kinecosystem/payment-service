@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError, ServiceNotFoundError
 from .middleware import handle_errors
-from .models import Payment, WalletRequest, PaymentRequest, Watcher, Service
+from .models import Payment, WalletRequest, PaymentRequest, Service
 from .queue import enqueue_create_wallet, enqueue_send_payment
 from .utils import get_network_passphrase
 from .blockchain import Blockchain
@@ -106,34 +106,11 @@ def add_delete_address_watcher(service_id, address, payment_id):
 @app.route('/watchers', methods=['GET'])
 @handle_errors
 def get_watchers():
-    old = {}
-    for address, watchers in Watcher.get_all_watching_addresses().items():
-        old[address] = [[w.service_id, w.callback] for w in watchers]
-
-    new = {}
+    watchers = {}
     for address, services in Service.get_all_watching_addresses().items():
-        new[address] = [[s.service_id, s.callback] for s in services]
+        watchers[address] = [[s.service_id, s.callback] for s in services]
 
-    return jsonify({'old': old, 'new': new, 'all': Service.get_all_watching_addresses_inc_old()})
-
-@app.route('/watchers/<service_id>', methods=['PUT', 'POST'])
-@handle_errors
-def watch(service_id):
-    body = request.get_json()
-    body['service_id'] = service_id
-    if request.method == 'PUT':
-        watcher = Watcher(body)
-    else:
-        watcher = Watcher.get(service_id)
-        if watcher:
-            watcher.add_addresses(body['wallet_addresses'])
-        else:
-            watcher = Watcher(body)
-
-    watcher.save()
-    log.info('added watcher', watcher=watcher)
-
-    return jsonify(watcher.to_primitive())
+    return jsonify({'watchers': watchers})
 
 
 @app.route('/status', methods=['GET'])

@@ -4,7 +4,7 @@ import requests
 from . import config
 from .errors import PaymentNotFoundError, PersitentError
 from .log import get as get_log
-from .models import Payment, PaymentRequest, WalletRequest, Wallet
+from .models import Payment, PaymentRequest, WalletRequest
 from .utils import retry, lock
 from .redis_conn import redis_conn
 from .statsd import statsd
