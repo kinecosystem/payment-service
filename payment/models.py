@@ -6,7 +6,7 @@ from schematics.types import StringType, IntType, DateTimeType, ListType
 from kin.stellar.horizon_models import TransactionData
 from .errors import PaymentNotFoundError, ParseError
 from .redis_conn import redis_conn
-from .utils import retry
+import typing
 from .log import get as get_logger
 
 log = get_logger()
@@ -124,9 +124,9 @@ class Payment(ModelWithStr):
 
 
 class Service(ModelWithStr):
-    callback = StringType()  # a webhook to call when a payment is complete
-    service_id = StringType()
-    wallet_addresses = ListType(StringType)  # permanent addresses
+    callback = StringType(required=True)  # a webhook to call when a payment is complete
+    service_id = StringType(required=True)
+    wallet_addresses = ListType(StringType, required=True)  # permanent addresses
 
     @classmethod
     def _key(cls, service_id):
@@ -166,7 +166,7 @@ class Service(ModelWithStr):
         return self._get_all_temp_watching_addresses() | set(self.wallet_addresses)
 
     @classmethod
-    def get_all_watching_addresses(cls):
+    def get_all_watching_addresses(cls) -> typing.Dict[str, typing.List["Service"]]:
         """get all addresses watched by any service as map of address to list of services watching it."""
         addresses = {}
         for service in cls.get_all():
@@ -175,22 +175,6 @@ class Service(ModelWithStr):
                 if address not in addresses:
                     addresses[address] = []
                 addresses[address].append(service)
-
-        return addresses
-
-    @classmethod
-    def get_all_watching_addresses_inc_old(cls):
-        """return list of address=>list of callbacks."""
-        addresses = {}
-        for address, watchers in Watcher.get_all_watching_addresses().items():
-            if address not in addresses:
-                addresses[address] = []
-            addresses[address] = list(set(addresses[address]) | set([w.callback for w in watchers]))
-
-        for address, services in Service.get_all_watching_addresses().items():
-            if address not in addresses:
-                addresses[address] = []
-            addresses[address] = list(set(addresses[address]) | set([s.callback for s in services]))
 
         return addresses
 
@@ -214,53 +198,6 @@ class Service(ModelWithStr):
     def unwatch_payment(self, address, payment_id):
         # ignoring payment_id
         return
-
-
-class Watcher(ModelWithStr):
-    wallet_addresses = ListType(StringType)
-    callback = StringType()  # a webhook to call when a payment is complete
-    service_id = StringType()
-
-    def save(self):
-        redis_conn.hset(self._key(), self.service_id, json.dumps(self.to_primitive()))
-
-    def add_addresses(self, addresses):
-        self.wallet_addresses = list(
-            set(self.wallet_addresses) | set(addresses))
-
-    @classmethod
-    def get(cls, service_id):
-        data = redis_conn.hget(cls._key(), service_id)
-        if not data:
-            return None
-        return Watcher(json.loads(data.decode('utf8')))
-
-    @classmethod
-    def _key(cls):
-        return 'watchers:2'
-
-    @classmethod
-    def get_all(cls):
-        data = redis_conn.hgetall(cls._key()).values()
-
-        return [Watcher(json.loads(w.decode('utf8'))) for w in data]
-
-    @classmethod
-    def get_all_watching_addresses(cls):
-        """get a dict of address => watchers"""
-        addresses = {}
-        for watcher in cls.get_all():
-            for address in watcher.wallet_addresses:
-                if address not in addresses:
-                    addresses[address] = []
-                addresses[address].append(watcher)
-        return addresses
-
-    @classmethod
-    def get_subscribed(cls, address):
-        """get only watchers who are interested in this address."""
-        return [w for w in cls.get_all()
-                if address in w.wallet_addresses]
 
 
 class TransactionRecord(ModelWithStr):

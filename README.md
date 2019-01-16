@@ -83,15 +83,18 @@ The app_id will be written to the blockchain transaction and wallet will be crea
 When the user facing server, presents a spend offer, it can subscribe to updates on KIN payments to/from a specific address, by registering a callback
 
 ### Watch
-`PUT/ POST /watchers/<service_id>`
-
-A few different services can register callbacks. Each service is identified by `service_id`.
+`PUT/ DELETE /services/<service_id>`
 ```python
-class Watcher(ModelWithStr):
-    wallet_addresses = ListType(StringType)
+class Service(ModelWithStr):
     callback = StringType()  # a webhook to call when a payment is complete
     service_id = StringType()
+    wallet_addresses = ListType(StringType)  # permanent addresses
 ```
+
+A few different services can register callbacks. Each service is identified by `service_id`.
+
+To register to a specific payment on a specific address:
+`PUT/ DELETE /services/<service_id>/watchers/<address>/payments/<payment_id>`
 
 When the payment-service encounters a KIN payment including a registered wallet_address in either the `to` or `from` fields, it calls all the subscribed services' callback using the `HTTP POST` method with the payment payload (same as **Pay** command):
 ```python
