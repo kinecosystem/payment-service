@@ -124,9 +124,9 @@ class Payment(ModelWithStr):
 
 
 class Service(ModelWithStr):
-    callback = StringType()  # a webhook to call when a payment is complete
-    service_id = StringType()
-    wallet_addresses = ListType(StringType)  # permanent addresses
+    callback = StringType(required=True)  # a webhook to call when a payment is complete
+    service_id = StringType(required=True)
+    wallet_addresses = ListType(StringType, required=True)  # permanent addresses
 
     @classmethod
     def _key(cls, service_id):

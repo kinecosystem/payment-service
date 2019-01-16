@@ -81,6 +81,7 @@ def add_delete_service(service_id):
     else:
         body['service_id'] = service_id
         service = Service(body)
+        service.validate()
         service.save()
 
     return jsonify(service.to_primitive())
