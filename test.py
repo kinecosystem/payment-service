@@ -84,8 +84,33 @@ def test_load_from_redis():
                  'amount': 1})
     Payment(p.to_primitive())
     p.save()
-    Payment.get('test')
+    assert Payment.get('test').amount == p.amount
 
+
+def test_services():
+    redis_conn.flushall()
+    service = Service({
+        'service_id': 'my_service:%s' % random.random(),
+        'callback': 'my_callback',
+        'wallet_addresses': [],
+    })
+    service.save()
+
+    service.watch_payment('address-1', 'pay-1')
+    service.watch_payment('address-1', 'pay-2')
+
+    Service({
+        'service_id': 'my_service:%s' % random.random(),
+        'callback': 'my_callback2',
+        'wallet_addresses': ['address-2'],
+    }).save()
+
+    assert set(Service.get_all_watching_addresses().keys()) == set(['address-1', 'address-2'])
+
+    assert Service.get_all_watching_addresses()['address-1'][0].callback == 'my_callback'
+    assert Service.get_all_watching_addresses()['address-2'][0].callback == 'my_callback2'
+
+    assert len(Service.get_all_watching_addresses()['address-1']) == 1
 
 def test_status(client):
     res = client.get('/status')
