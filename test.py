@@ -3,13 +3,16 @@ import time
 import random
 import mock
 from payment.app import app
-from payment import config; config.MAX_CHANNELS = 3
+from payment import config;
+
+config.MAX_CHANNELS = 3
 
 from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
 from payment.utils import lock, safe_int
-from payment.models import Payment, Service
+from payment.models import Payment, PaymentRequest, Service
+from payment.queue import pay
 
 
 def test_lock():
@@ -112,6 +115,7 @@ def test_services():
 
     assert len(Service.get_all_watching_addresses()['address-1']) == 1
 
+
 def test_status(client):
     res = client.get('/status')
     assert res.json['app_name'] == 'payment-service'
@@ -152,6 +156,28 @@ def test_old_new_watchers(client):
 
     res = client.get('/watchers')
     assert set(['perm-1', 'perm-2', 'temp-1', 'temp-2']) - set(res.json['watchers'].keys()) == set()
+
+
+def test_payment_to_burnt():
+    from generate_funding_address import generate, Keypair
+    from payment.blockchain import get_sdk
+
+    public, private = generate()
+    config.STELLAR_BASE_SEED = private
+    app_id = 'test'
+    wallet = Keypair.random()
+    target_address = wallet.address().decode()
+    print(public, target_address)
+
+    with get_sdk(private) as blockchain:
+        blockchain.create_wallet(target_address, app_id)
+
+    p = PaymentRequest({'id': 'test:%s' % target_address,
+                        'app_id': app_id,
+                        'recipient_address': target_address,
+                        'callback': 'test',
+                        'amount': 1})
+    pay(p)
 
 
 @pytest.fixture
