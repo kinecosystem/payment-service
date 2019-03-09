@@ -62,7 +62,7 @@ def fund_kin(public_address):
     return res.json()
 
 
-if __name__ == '__main__':
+def generate():
     # generates a file that can be 'sourced' and creates environment vars for
     # payment-service
     keys = Keypair.random()
@@ -73,7 +73,11 @@ if __name__ == '__main__':
     fund_lumens(public_address)
     trust_kin(private_seed)
     fund_kin(public_address)
+    return public_address, private_seed
 
+
+if __name__ == '__main__':
+    public_address, private_seed = generate()
     os.makedirs(config.OUTPUT_DIR, exist_ok=True)
     with open(os.path.join(config.OUTPUT_DIR, '.secrets'), 'w') as f:
         print('export STELLAR_BASE_SEED=%s' % private_seed, file=f)
