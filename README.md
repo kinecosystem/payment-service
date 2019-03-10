@@ -5,6 +5,8 @@ The payment-service is a service meant to be run internally, i.e. not directly c
 * subscribe on KIN payments sent/received on any given address
 * fund new stellar wallets
 
+<a href="https://partners.kinecosystem.com/docs/server_payment_service.html"><img src="https://partners.kinecosystem.com/img/documentation-button2x.png" width=300 height=84 alt="Documentation"/></a>
+
 The service is initiated with a root wallet account that contains sufficient KIN and XLM. The service is diveded into 3:
 1. Http server for incoming requests
 1. Background worker to process payment requests and perform callbacks
