@@ -1,88 +1,73 @@
 import contextlib
-import stellar_base
+# import stellar_base
 from typing import List
-from kin.errors import AccountExistsError, AccountNotFoundError
-from kin.stellar.horizon_models import TransactionData
-from kin.sdk import Keypair, ChannelManager, SDK
+# from kin.errors import AccountExistsError, AccountNotFoundError
+# from kin.stellar.horizon_models import TransactionData
+# from kin.sdk import Keypair, ChannelManager, SDK
+
+from kin.errors import AccountNotFoundError
+from kin.transactions import SimplifiedTransaction
+from kin import KinClient
+from kin.account import KinAccount
+from kin import Keypair
+from kin_base import Keypair as BaseKeypair
+
 from . import config
 from .models import Payment, Wallet, TransactionRecord
-from .utils import get_network_name
+# from .utils import get_network_name
 from .log import get as get_log
-from .errors import ParseError, WalletNotFoundError
+# from .errors import ParseError, WalletNotFoundError
+from .errors import WalletNotFoundError
+from .config import STELLAR_ENV
 
-
-log = get_log()
-_write_sdks = {}
-
-
-def seed_to_address(seed: str) -> str:
-    """convert seed to address."""
-    return Keypair.from_seed(seed).address().decode()
-
-
-def _init(seed='', channels=[]):
-    kin_sdk = SDK(
-        secret_key=seed,
-        horizon_endpoint_uri=config.STELLAR_HORIZON_URL,
-        network=get_network_name(config.STELLAR_NETWORK),
-        channel_secret_keys=channels,
-        kin_asset=stellar_base.asset.Asset(config.STELLAR_KIN_TOKEN_NAME,
-                                           config.STELLAR_KIN_ISSUER_ADDRESS))
-
-    return kin_sdk
-
+log = get_log('rq.worker')
 
 class Blockchain(object):
-    read_sdk = _init()
-    asset_code = read_sdk.kin_asset.code
-    asset_issuer = read_sdk.kin_asset.issuer
+    read_sdk = KinClient(STELLAR_ENV)
+    minimum_fee = read_sdk.get_minimum_fee()
 
-    def __init__(self, sdk: SDK, root_address, channel_addresses):
+    def __init__(self, sdk: KinAccount, channel: str):
         self.write_sdk = sdk
-        self.root_address = root_address
-        self.channel_addresses = channel_addresses
+        self.write_sdk.raw_seed = BaseKeypair.from_seed(sdk.keypair.secret_seed).raw_seed()
+        self.root_address = self.write_sdk.keypair.public_address
+        self.channel = channel
+        self.channel_address = Keypair.address_from_seed(channel)
 
-    def create_wallet(self, public_address: str, app_id: str,
-                      initial_xlm_amount: int = config.STELLAR_INITIAL_XLM_AMOUNT) -> None:
+    def create_wallet(self, public_address: str) -> str:
         """create a wallet."""
-        try:
-            account_exists = self.write_sdk.check_account_exists(public_address)
-        except Exception as e:
-            log.info('failed checking wallet state', public_address=public_address)
-        else:
-            if account_exists:
-                raise AccountExistsError
+        # try:
+        #     account_exists = self.write_sdk.check_account_exists(public_address)
+        # except Exception as e:
+        #     log.info('failed checking wallet state', public_address=public_address)
+        # else:
+        #     if account_exists:
+        #         raise AccountExistsError
 
         log.info('creating wallet', public_address=public_address)
 
-        memo = '1-{}'.format(app_id)
-        tx_id = self.write_sdk.create_account(public_address, initial_xlm_amount, memo, activate=True)
+        # We use 'build_create_account' instead of 'create_account' since we have our method of managing seeds in redis
+        builder = self.write_sdk.build_create_account(public_address, 0, self.minimum_fee)
+        tx_id = self._sign_and_send_tx(builder)
         log.info('create wallet transaction', tx_id=tx_id)
         return tx_id
 
-    def send_native(self, public_address: str, amount: int, app_id: str):
-        memo = '1-{}'.format(app_id)
-        tx_id = self.write_sdk.send_native(public_address, amount, memo)
-        log.info('send native transaction', tx_id=tx_id)
-        return tx_id
-
-    def pay_to(self, public_address: str, amount: int, app_id: str, payment_id: str) -> Payment:
+    def pay_to(self, public_address: str, amount: int, payment_id: str) -> str:
         """send kins to an address."""
         log.info('sending kin to', address=public_address)
-        memo = Payment.create_memo(app_id, payment_id)
-        tx_id = self.write_sdk.send_kin(public_address, amount, memo_text=memo)
-        return tx_id
+        # We use 'build_send_kin' instead of 'send_kin' since we have our method of managing seeds in redis
+        builder = self.write_sdk.build_send_kin(public_address, amount, fee=self.minimum_fee, memo_text=payment_id)
+        return self._sign_and_send_tx(builder)
 
     @staticmethod
     def get_wallet(public_address: str) -> Wallet:
         try:
             data = Blockchain.read_sdk.get_account_data(public_address)
-            return Wallet.from_blockchain(data, Blockchain.read_sdk.kin_asset)
+            return Wallet.from_blockchain(data)
         except AccountNotFoundError:
             raise WalletNotFoundError('wallet %s not found' % public_address)
 
     @staticmethod
-    def get_transaction_data(tx_id) -> TransactionData:
+    def get_transaction_data(tx_id) -> SimplifiedTransaction:
         return Blockchain.read_sdk.get_transaction_data(tx_id)
 
     @staticmethod
@@ -94,12 +79,11 @@ class Blockchain(object):
         """try to parse payment from given tx_data. return None when failed."""
         try:
             return Payment.from_blockchain(tx_data)
-        except ParseError as e:
-            log.exception('failed to parse payment', tx_data=tx_data)
-            return
+        # except ParseError as e:  # todo Ron: Why was this removed
+        #     log.exception('failed to parse payment', tx_data=tx_data)
+        #     return
         except Exception as e:
             log.exception('failed to parse payment', tx_data=tx_data)
-            return
 
     @staticmethod
     def get_address_records(address, cursor, limit=100) -> List[TransactionRecord]:
@@ -127,27 +111,28 @@ class Blockchain(object):
         reply = Blockchain.read_sdk.horizon.payments(params={'cursor': 'now', 'order': 'desc', 'limit': 1})
         return reply['_embedded']['records'][0]['paging_token']
 
+    def _sign_and_send_tx(self, builder) -> str:
+        builder.set_channel(self.channel)
+        builder.sign(self.channel)
+        if self.channel != self.write_sdk.keypair.secret_seed:
+            builder.sign(self.write_sdk.keypair.secret_seed)
+        tx_id = self.write_sdk.submit_transaction(builder)
+        return tx_id
+
 
 # The wallet that funds all other channels and sub-funding-wallets
-root_wallet = Blockchain(_init(config.STELLAR_BASE_SEED), seed_to_address(config.STELLAR_BASE_SEED), [])
+root_account = Blockchain.read_sdk.kin_account(config.STELLAR_BASE_SEED, channel_secret_keys=[], app_id='')  # We need to choose an app_id
+root_wallet = Blockchain(root_account, root_account.keypair.secret_seed)
 
 
 @contextlib.contextmanager
-def get_sdk(seed: str) -> Blockchain:
+def get_sdk(seed: str, app_id: str) -> Blockchain:
     from .channel_factory import get_channel
-    global _write_sdks
-    address = seed_to_address(seed)
 
-    # find if this address already was initialized
-    if address not in _write_sdks:
-        _write_sdks[address] = _init(seed)
-    sdk = _write_sdks[address]
+    sdk = Blockchain.read_sdk.kin_account(seed, app_id=app_id)
 
     with get_channel(root_wallet) as channel:
-        channels = [channel]
-        sdk.channel_manager = ChannelManager(seed, channels, sdk.network, sdk.horizon)
-
         try:
-            yield Blockchain(sdk, address, [seed_to_address(ch_seed) for ch_seed in channels])
+            yield Blockchain(sdk, channel)
         finally:
-            sdk.channel_manager = None
+            pass

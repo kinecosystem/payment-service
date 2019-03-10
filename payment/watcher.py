@@ -54,12 +54,12 @@ def worker(stop_event):
             cursor = get_last_cursor()
             log.debug('got last cursor %s' % cursor)
             flow = TransactionFlow(cursor)
-            for address, tx in flow.get_transactions(addresses_callbacks.keys()):
+            for address, tx, paging_token in flow.get_transactions(addresses_callbacks.keys()):
                 log.info('found transaction for address', address=address)
                 payment = Blockchain.try_parse_payment(tx)
                 if payment:
                     on_payment(address, addresses_callbacks[address], payment)
-                cursor = CursorManager.save(tx.paging_token)
+                cursor = CursorManager.save(paging_token)
             log.debug('save last cursor %s' % flow.cursor)
             # flow.cursor is the last block observed - it might not be a kin payment, 
             # so the previous .save inside the loop doesnt guarantee avoidance of reprocessing

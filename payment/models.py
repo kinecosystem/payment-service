@@ -3,8 +3,13 @@ from collections import namedtuple
 from datetime import datetime
 from schematics import Model
 from schematics.types import StringType, IntType, DateTimeType, ListType
-from kin.stellar.horizon_models import TransactionData
-from .errors import PaymentNotFoundError, ParseError
+from kin.transactions import NATIVE_ASSET_TYPE, SimplifiedTransaction
+from kin import decode_transaction
+from kin import KinErrors
+
+from .blockchain import root_account
+from .errors import PaymentNotFoundError, ParseError, TransactionMismatch
+
 from .redis_conn import redis_conn
 import typing
 from .log import get as get_logger
@@ -37,17 +42,13 @@ class Wallet(ModelWithStr):
     id = StringType()
 
     @classmethod
-    def from_blockchain(cls, data, kin_asset):
+    def from_blockchain(cls, data):
         wallet = Wallet()
         wallet.wallet_address = data.id
         kin_balance = next(
             (coin.balance for coin in data.balances
-             if coin.asset_code == kin_asset.code
-             and coin.asset_issuer == kin_asset.issuer), None)
+             if coin.asset_type == NATIVE_ASSET_TYPE))
         wallet.kin_balance = None if kin_balance is None else int(kin_balance)
-        wallet.native_balance = float(next(
-            (coin.balance for coin in data.balances
-             if coin.asset_type == 'native'), 0))
         return wallet
 
 
@@ -57,6 +58,52 @@ class PaymentRequest(ModelWithStr):
     recipient_address = StringType(required=True)
     id = StringType(required=True)
     callback = StringType(required=True)  # a webhook to call when a payment is complete
+
+
+class WhitelistRequest(ModelWithStr):
+    order_id = StringType()
+    source = StringType()
+    destination = StringType()
+    amount = IntType()
+    xdr = StringType()
+    network_id = StringType()
+    app_id = StringType()
+
+    @staticmethod
+    def _compare_attr(attr1, attr2, attr_name):
+        if attr1 != attr2:
+            raise TransactionMismatch('{attr_name}: {attr1} does not match expected {attr_name}: {attr2}'.
+                                      format(attr_name=attr_name,
+                                             attr1=attr1,
+                                             attr2=attr2))
+
+    def verify_transaction(self):
+        """Verify that the encoded transaction matches our expectations"""
+        try:
+            decoded_tx = decode_transaction(self.xdr, self.network_id)
+        except Exception as e:
+            if isinstance(e, KinErrors.CantSimplifyError):
+                raise TransactionMismatch('Unexpected transaction')
+            log.error('Couldn\'t decode tx with xdr: {}'.format(self.xdr))
+            raise TransactionMismatch('Transaction could not be decoded')
+        if decoded_tx.memo is None:
+            raise TransactionMismatch('Unexpected memo: Empty')
+        memo_parts = decoded_tx.memo.split('-')
+        if len(memo_parts) != 3:
+            raise TransactionMismatch('Unexpected memo: expected a 3 part memo')
+        self._compare_attr(memo_parts[1], self.app_id, 'App id')
+        self._compare_attr(memo_parts[2], self.order_id, 'Order id')
+        self._compare_attr(decoded_tx.source, self.source, 'Source account')
+        self._compare_attr(decoded_tx.operation.destination, self.destination, 'Destination account')
+        self._compare_attr(decoded_tx.operation.amount, self.amount, 'Amount')
+
+    def whitelist(self) -> str:
+        """Sign and return a transaction to whitelist it"""
+        # Fix for circular imports
+        # https://stackoverflow.com/questions/1250103/attributeerror-module-object-has-no-attribute
+        # Get app hot wallet account
+        return root_account.whitelist_transaction({'envelope': self.xdr,
+                                                  'network_id': self.network_id})
 
 
 class Payment(ModelWithStr):
@@ -81,16 +128,15 @@ class Payment(ModelWithStr):
         return p
 
     @classmethod
-    def from_blockchain(cls, data: TransactionData):
+    def from_blockchain(cls, data: SimplifiedTransaction):
         p = Payment()
         p.id = cls.parse_memo(data.memo).payment_id
         p.app_id = cls.parse_memo(data.memo).app_id
-        p.transaction_id = data.hash
-        # p.operation_id = data.operations[0].id
-        p.sender_address = data.operations[0].from_address
-        p.recipient_address = data.operations[0].to_address
-        p.amount = int(data.operations[0].amount)
-        p.timestamp = data.created_at
+        p.transaction_id = data.id
+        p.sender_address = data.source
+        p.recipient_address = data.operation.destination
+        p.amount = int(data.operation.amount)
+        p.timestamp = datetime.strptime(data.timestamp, '%Y-%m-%dT%H:%M:%SZ')  # 2018-11-12T06:45:40Z
         return p
 
     @classmethod
@@ -204,8 +250,7 @@ class TransactionRecord(ModelWithStr):
     to_address = StringType(serialized_name='to', required=True)
     from_address = StringType(serialized_name='from', required=True)
     transaction_hash = StringType(required=True)
-    asset_code = StringType()
-    asset_issuer = StringType()
+    asset_type = StringType()
     paging_token = StringType(required=True)
     type = StringType(required=True)
 

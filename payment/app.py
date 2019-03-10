@@ -114,6 +114,15 @@ def get_watchers():
     return jsonify({'watchers': watchers})
 
 
+@app.route('/whitelist', methods=['POST'])
+@handle_errors
+def whitelist():
+    whitelist_request = WhitelistRequest(request.get_json())
+    whitelist_request.verify_transaction()
+    # Transaction is verified, whitelist it and return to marketplace
+    whitelisted_tx = whitelist_request.whitelist()
+    return jsonify({'tx': whitelisted_tx}), 200
+
 @app.route('/status', methods=['GET'])
 def status():
     body = request.get_json()
@@ -129,6 +138,4 @@ def status():
 def get_config():
     return jsonify({'horizon_url': config.STELLAR_HORIZON_URL,
                     'network_passphrase': get_network_passphrase(config.STELLAR_NETWORK),
-                    'asset_issuer': config.STELLAR_KIN_ISSUER_ADDRESS,
-                    'asset_code': config.STELLAR_KIN_TOKEN_NAME,
                     })

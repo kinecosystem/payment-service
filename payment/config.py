@@ -1,11 +1,11 @@
 import os
 from datetime import datetime
+from kin import Environment
 
 
 STELLAR_HORIZON_URL = os.environ['STELLAR_HORIZON_URL']
 STELLAR_NETWORK = os.environ['STELLAR_NETWORK']
-STELLAR_KIN_ISSUER_ADDRESS = os.environ['STELLAR_KIN_ISSUER_ADDRESS']
-STELLAR_KIN_TOKEN_NAME = os.environ['STELLAR_KIN_TOKEN_NAME']
+STELLAR_ENV = Environment('CUSTOM', STELLAR_HORIZON_URL, STELLAR_NETWORK)
 
 CHANNEL_SALT = os.environ.get('CHANNEL_SALT')
 MAX_CHANNELS = int(os.environ.get('MAX_CHANNELS', '20'))

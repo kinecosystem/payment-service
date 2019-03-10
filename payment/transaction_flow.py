@@ -2,6 +2,8 @@ from .blockchain import Blockchain
 from .log import get as get_log
 from typing import Callable, List, Generator
 from .models import TransactionRecord
+from kin.transactions import NATIVE_ASSET_TYPE
+from kin import KinErrors
 
 
 log = get_log()
@@ -18,8 +20,7 @@ class TransactionFlow():
         while records:
             for record in records:
                 if (record.type == 'payment'
-                        and record.asset_code == Blockchain.asset_code
-                        and record.asset_issuer == Blockchain.asset_issuer):
+                        and record.asset_type == NATIVE_ASSET_TYPE):
                     yield record
                 self.cursor = record.paging_token
             records = get_records(self.cursor)
@@ -37,8 +38,11 @@ class TransactionFlow():
             return Blockchain.get_all_records(cursor, 100)
 
         for record in self._yield_transactions(get_all_records):
-            if record.to_address in addresses:
-                yield record.to_address, Blockchain.get_transaction_data(record.transaction_hash)
-            elif record.from_address in addresses:
-                yield record.from_address, Blockchain.get_transaction_data(record.transaction_hash)
-            # else - address is not watched
+            try:
+                if record.to_address in addresses:
+                    yield record.to_address, Blockchain.get_transaction_data(record.transaction_hash), record.paging_token
+                elif record.from_address in addresses:
+                    yield record.from_address, Blockchain.get_transaction_data(record.transaction_hash), record.paging_token
+            except KinErrors.CantSimplifyError as e:
+                # We dont expect any transaction that cant be simplified
+                log.warning('warning: while getting record', error=e, record=record)

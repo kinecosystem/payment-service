@@ -3,12 +3,13 @@
 The payment-service is a service meant to be run internally, i.e. not directly connected to the internet. It provides the functionality to:
 * send KIN payments
 * subscribe on KIN payments sent/received on any given address
-* fund new stellar wallets
+* whitelist transactions
+* fund new stellar wallets ?
 
 <a href="https://partners.kinecosystem.com/docs/server_payment_service.html"><img src="https://partners.kinecosystem.com/img/documentation-button2x.png" width=300 height=84 alt="Documentation"/></a>
 
-The service is initiated with a root wallet account that contains sufficient KIN and XLM. The service is diveded into 3:
-1. Http server for incoming requests
+The service is initiated with a root wallet account that contains sufficient KIN. The service is diveded into 3:
+1. HTTP server for incoming requests
 1. Background worker to process payment requests and perform callbacks
 1. Polling process that listens on the blockchain and sends callbacks on any transaction involving a presubscribed address
 
@@ -23,9 +24,6 @@ The service expects configuration given via configuration variables:
 * `STELLAR_NETWORK` stellar network name or passpharse ('PUBLIC'/'TESTNET'/'private testnet')
 * `STELLAR_KIN_ISSUER_ADDRESS` stellar asset issuer ('GBQ3DQOA7NF52FVV7ES3CR3ZMHUEY4LTHDAQKDTO6S546JCLFPEQGCPK')
 * `STELLAR_KIN_TOKEN_NAME` stellar asset name ('KIN')
-* `KIN_FAUCET` url of a KIN faucet ('http://159.65.84.173:5000') - used for `generate-funding-address` makefile target
-* `XLM_FAUCET` url of a XLM faucet/ friendbot ('http://friendbot-kik.kininfrastructure.com')
-* `STELLAR_INITIAL_XLM_AMOUNT` initial amount of XLM when funding a wallet (2)
 
 An example for these variables exists in `local.sh`. The makefile uses this file to export the variables and run the services.
 
@@ -54,7 +52,7 @@ class PaymentRequest(ModelWithStr):
 ```
 The blockchain transaction will include the `app_id` and `id` of the payment in the memo field.
 
-Once the payment is done, the payment-server notifies the completion_callback using an **`HTTP POST`** method including the payment information:
+Once the payment is done, the payment-service notifies the completion_callback using an **`HTTP POST`** method including the payment information:
 ```python
 class Payment(ModelWithStr):
     id = StringType()
@@ -85,7 +83,7 @@ The app_id will be written to the blockchain transaction and wallet will be crea
 When the user facing server, presents a spend offer, it can subscribe to updates on KIN payments to/from a specific address, by registering a callback
 
 ### Watch
-`PUT/ DELETE /services/<service_id>`
+`PUT/DELETE /services/<service_id>`
 ```python
 class Service(ModelWithStr):
     callback = StringType()  # a webhook to call when a payment is complete
