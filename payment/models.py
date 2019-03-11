@@ -1,4 +1,5 @@
 import json
+from typing import Union, List, Dict
 from collections import namedtuple
 from datetime import datetime
 from schematics import Model
@@ -7,11 +8,9 @@ from kin.transactions import NATIVE_ASSET_TYPE, SimplifiedTransaction
 from kin import decode_transaction
 from kin import KinErrors
 
-from .blockchain import root_account
 from .errors import PaymentNotFoundError, ParseError, TransactionMismatch
 
 from .redis_conn import redis_conn
-import typing
 from .log import get as get_logger
 
 log = get_logger()
@@ -60,14 +59,15 @@ class PaymentRequest(ModelWithStr):
     callback = StringType(required=True)  # a webhook to call when a payment is complete
 
 
+
 class WhitelistRequest(ModelWithStr):
-    order_id = StringType()
-    source = StringType()
-    destination = StringType()
-    amount = IntType()
-    xdr = StringType()
+    id = StringType(required=True)
+    sender_address = StringType(required=True)
+    recipient_address = StringType(required=True)
+    amount = IntType(required=True)
+    xdr = StringType(required=True)
+    app_id = StringType(required=True)
     network_id = StringType()
-    app_id = StringType()
 
     @staticmethod
     def _compare_attr(attr1, attr2, attr_name):
@@ -93,17 +93,20 @@ class WhitelistRequest(ModelWithStr):
             raise TransactionMismatch('Unexpected memo: expected a 3 part memo')
         self._compare_attr(memo_parts[1], self.app_id, 'App id')
         self._compare_attr(memo_parts[2], self.order_id, 'Order id')
-        self._compare_attr(decoded_tx.source, self.source, 'Source account')
-        self._compare_attr(decoded_tx.operation.destination, self.destination, 'Destination account')
+        self._compare_attr(decoded_tx.source, self.sender_address, 'Sender account')
+        self._compare_attr(decoded_tx.operation.destination, self.recipient_address, 'Destination account')
         self._compare_attr(decoded_tx.operation.amount, self.amount, 'Amount')
+        return decoded_tx
 
     def whitelist(self) -> str:
         """Sign and return a transaction to whitelist it"""
-        # Fix for circular imports
-        # https://stackoverflow.com/questions/1250103/attributeerror-module-object-has-no-attribute
-        # Get app hot wallet account
+        from .blockchain import root_account
         return root_account.whitelist_transaction({'envelope': self.xdr,
                                                   'network_id': self.network_id})
+
+
+class SubmitTransactionRequest(WhitelistRequest):
+    callback = StringType(required=True)
 
 
 class Payment(ModelWithStr):
@@ -117,7 +120,7 @@ class Payment(ModelWithStr):
     timestamp = DateTimeType(default=datetime.utcnow())
 
     @classmethod
-    def from_payment_request(cls, request: PaymentRequest, sender_address: str, tx_id: str):
+    def from_payment_request(cls, request: Union[PaymentRequest, SubmitTransactionRequest], sender_address: str, tx_id: str):
         p = Payment()
         p.id = request.id
         p.app_id = request.app_id
@@ -212,7 +215,7 @@ class Service(ModelWithStr):
         return self._get_all_temp_watching_addresses() | set(self.wallet_addresses)
 
     @classmethod
-    def get_all_watching_addresses(cls) -> typing.Dict[str, typing.List["Service"]]:
+    def get_all_watching_addresses(cls) -> Dict[str, List["Service"]]:
         """get all addresses watched by any service as map of address to list of services watching it."""
         addresses = {}
         for service in cls.get_all():

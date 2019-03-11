@@ -121,7 +121,7 @@ class Blockchain(object):
 
 
 # The wallet that funds all other channels and sub-funding-wallets
-root_account = Blockchain.read_sdk.kin_account(config.STELLAR_BASE_SEED, channel_secret_keys=[], app_id='')  # We need to choose an app_id
+root_account = Blockchain.read_sdk.kin_account(config.STELLAR_BASE_SEED, channel_secret_keys=[], app_id='kin')  # We need to choose an app_id
 root_wallet = Blockchain(root_account, root_account.keypair.secret_seed)
 
 
@@ -136,3 +136,4 @@ def get_sdk(seed: str, app_id: str) -> Blockchain:
             yield Blockchain(sdk, channel)
         finally:
             pass
+

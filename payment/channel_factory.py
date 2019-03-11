@@ -10,6 +10,7 @@ from .statsd import statsd
 from .redis_conn import redis_conn
 from .blockchain import Blockchain
 from .log import get as get_log
+from kin import KinErrors
 
 
 log = get_log()
@@ -52,7 +53,14 @@ def get_next_channel_id():
 
 @contextlib.contextmanager
 def get_channel(root_wallet: Blockchain):
-    """gets next channel_id from redis, generates address/ tops up and inits sdk."""
+    """gets next channel_id from redis and generates address (creating the wallet if needed)."""
     with get_next_channel_id() as channel_id:
         keys = generate_key(root_wallet, channel_id)
+        public_address = keys.address().decode()
+        try:
+            root_wallet.create_wallet(public_address)  # XXX this causes a race-condition
+            log.info('# created channel: %s: %s' % (channel_id, public_address))
+        except KinErrors.AccountExistsError:
+                log.info('# existing channel: %s: %s' % (channel_id, public_address))
+
         yield keys.seed().decode()

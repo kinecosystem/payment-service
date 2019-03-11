@@ -59,23 +59,23 @@ def test_generate_channels():
         print('got records', records)
         print('wallet: ', Blockchain.get_wallet(records[0].from_address))
 
-    with get_sdk(config.STELLAR_BASE_SEED) as bc1:
-        print(bc1.channel_addresses[0])
-        print('wallet: ', Blockchain.get_wallet(bc1.channel_addresses[0]))
-        with get_sdk(config.STELLAR_BASE_SEED) as bc2:
-            print(bc2.channel_addresses[0])
-            print('wallet: ', Blockchain.get_wallet(bc2.channel_addresses[0]))
-            with get_sdk(config.STELLAR_BASE_SEED) as bc3:
-                print(bc3.channel_addresses[0])
-                print('wallet: ', Blockchain.get_wallet(bc3.channel_addresses[0]))
-                assert bc1.channel_addresses != bc2.channel_addresses != bc3.channel_addresses
-        orig_bc1_channel_addresses = bc1.channel_addresses
+    with get_sdk(config.STELLAR_BASE_SEED, 'test') as bc1:
+        print(bc1.channel_address)
+        print('wallet: ', Blockchain.get_wallet(bc1.channel_address))
+        with get_sdk(config.STELLAR_BASE_SEED, 'test') as bc2:
+            print(bc2.channel_address)
+            print('wallet: ', Blockchain.get_wallet(bc2.channel_address))
+            with get_sdk(config.STELLAR_BASE_SEED, 'test') as bc3:
+                print(bc3.channel_address)
+                print('wallet: ', Blockchain.get_wallet(bc3.channel_address))
+                assert bc1.channel_address != bc2.channel_address != bc3.channel_address
+        orig_bc1_channel_address = bc1.channel_address
 
-    with get_sdk(config.STELLAR_BASE_SEED) as bc1:
-        print(bc1.channel_addresses[0])
-        print('wallet: ', Blockchain.get_wallet(bc1.channel_addresses[0]))
+    with get_sdk(config.STELLAR_BASE_SEED, 'test') as bc1:
+        print(bc1.channel_address)
+        print('wallet: ', Blockchain.get_wallet(bc1.channel_address))
         # assert only true if MAX_CHANNELS == 3
-        assert bc1.channel_addresses in (orig_bc1_channel_addresses, bc2.channel_addresses, bc3.channel_addresses)
+        assert bc1.channel_address in (orig_bc1_channel_address, bc2.channel_address, bc3.channel_address)
 
 
 def test_load_from_redis():

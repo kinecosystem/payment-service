@@ -1,16 +1,16 @@
-import kin
+from typing import Union
 from rq import Queue
 import requests
+
 from . import config
 from .errors import PaymentNotFoundError, PersitentError
 from .log import get as get_log
-from .models import Payment, PaymentRequest, WalletRequest
+from .models import Payment, PaymentRequest, WalletRequest, SubmitTransactionRequest
 from .utils import retry, lock
 from .redis_conn import redis_conn
 from .statsd import statsd
-from .blockchain import Blockchain, get_sdk
-from kin import KinErrors
-
+from .blockchain import Blockchain, get_sdk, root_account
+from kin import KinErrors, Builder
 
 q = Queue(connection=redis_conn)
 log = get_log('rq.worker')
@@ -22,6 +22,14 @@ def enqueue_send_payment(payment_request: PaymentRequest):
                      tags=['app_id:%s' % payment_request.app_id])
     result = q.enqueue(pay_and_callback, payment_request.to_primitive())
     log.info('enqueue result', result=result, payment_request=payment_request)
+
+
+def enqueue_submit_tx(submit_request: SubmitTransactionRequest):
+    # statsd.inc_count('transaction.enqueue',
+    #                 payment_request.amount,
+    #                 tags=['app_id:%s' % payment_request.app_id])
+    result = q.enqueue(submit_tx_callback, submit_request.to_primitive())
+    log.info('enqueue result', result=result, submit_request=submit_request)
 
 
 def enqueue_create_wallet(wallet_request: WalletRequest):
@@ -53,17 +61,17 @@ def enqueue_report_wallet_balance(root_wallet_address):
     q.enqueue(report_balance, root_wallet_address, [])
 
 
-def enqueue_payment_callback(callback: str, wallet_address: str, value: Payment):
+def enqueue_payment_callback(callback: str, value: Payment, action: str):
     __enqueue_callback(
         callback=callback,
         app_id=value.app_id,
         objekt='payment',
         state='success',
-        action='send' if wallet_address == value.sender_address else 'receive',
+        action=action,
         value=value.to_primitive())
 
 
-def enqueue_payment_failed_callback(request: PaymentRequest, reason: str):
+def enqueue_payment_failed_callback(request: Union[PaymentRequest, SubmitTransactionRequest] , reason: str):
     __enqueue_callback(
         callback=request.callback,
         app_id=request.app_id,
@@ -132,7 +140,25 @@ def pay_and_callback(payment_request: dict):
             enqueue_payment_failed_callback(payment_request, str(e))
             raise  # crash the job
         else:
-            enqueue_payment_callback(payment_request.callback, payment.sender_address, payment)
+            enqueue_payment_callback(payment_request.callback, payment, 'send')
+
+
+def submit_tx_callback(submit_request: dict):
+    """lock, try to pay and callback."""
+    log.info('submit_tx_callback received', submit_request=submit_request)
+    submit_request = SubmitTransactionRequest(submit_request)
+    tx_builder = Builder.import_from_xdr(submit_request.xdr)
+    tx_builder.sign(config.STELLAR_BASE_SEED)
+    tx_builder.network = submit_request.network_id # The XDR doesn't include the network id
+    with lock(redis_conn, 'submit:{}'.format(submit_request.id), blocking_timeout=120):
+        try:
+            tx_id = root_account.submit_transaction(tx_builder)
+        except Exception as e:
+            enqueue_payment_failed_callback(submit_request, str(e))
+            raise  # crash the job
+        else:
+            payment = Payment.from_payment_request(submit_request, submit_request.sender_address, tx_id)
+            enqueue_payment_callback(submit_request.callback, payment, 'receive')
 
 
 def create_wallet_and_callback(wallet_request: dict):

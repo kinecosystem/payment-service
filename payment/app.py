@@ -6,11 +6,9 @@ from flask import Flask, request, jsonify
 from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError, ServiceNotFoundError
 from .middleware import handle_errors
-from .models import Payment, WalletRequest, PaymentRequest, Service
-from .queue import enqueue_create_wallet, enqueue_send_payment
-from .utils import get_network_passphrase
-from .blockchain import Blockchain
-
+from .models import Payment, WalletRequest, PaymentRequest, Service, WhitelistRequest, SubmitTransactionRequest
+from .queue import enqueue_create_wallet, enqueue_send_payment, enqueue_submit_tx
+from .blockchain import Blockchain, root_wallet
 
 app = Flask(__name__)
 
@@ -114,7 +112,7 @@ def get_watchers():
     return jsonify({'watchers': watchers})
 
 
-@app.route('/whitelist', methods=['POST'])
+@app.route('/tx/whitelist', methods=['POST'])
 @handle_errors
 def whitelist():
     whitelist_request = WhitelistRequest(request.get_json())
@@ -122,6 +120,20 @@ def whitelist():
     # Transaction is verified, whitelist it and return to marketplace
     whitelisted_tx = whitelist_request.whitelist()
     return jsonify({'tx': whitelisted_tx}), 200
+
+
+@app.route('/tx/submit', methods=['POST'])
+@handle_errors
+def whitelist_submit():
+    network_id = root_wallet.read_sdk.environment.passphrase_hash
+    submit_request = SubmitTransactionRequest(request.get_json())
+    submit_request.network_id = network_id
+    submit_request.validate()
+    submit_request.verify_transaction()
+    enqueue_submit_tx(submit_request)
+    # We can also directly send the XDR without the build with root_account.horizon.submit()
+    return jsonify(), 201
+
 
 @app.route('/status', methods=['GET'])
 def status():

@@ -38,7 +38,7 @@ def on_payment(address: str, services: typing.List[Service], payment: Payment):
                            'address:%s' % address])
 
     for service in services:
-        enqueue_payment_callback(service.callback, address, payment)
+        enqueue_payment_callback(service.callback, payment, 'receive')
 
 
 def worker(stop_event):
