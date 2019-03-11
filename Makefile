@@ -32,7 +32,7 @@ watcher-prod:
 
 # docker related
 revision := $(shell git rev-parse --short HEAD)
-image := "kinecosystem/payment-service"
+image := "kinecosystem/payment-service-v3"
 
 build-image:
 	docker build -t ${image} -f Dockerfile \

@@ -1,19 +1,18 @@
   #!/usr/bin/env python
 import sys
 from uuid import uuid4
-from rq import Connection, Worker, Queue
+from rq import Connection, Worker
 from rq.job import Job, JobStatus
 
 # Preload libraries
 from payment.statsd import statsd
 from payment.log import get as get_log
-from payment import config
 from payment.errors import PersitentError
 from payment.redis_conn import redis_conn
+from payment.queue import q
 
 
 log = get_log()
-q = Queue(connection=redis_conn)
 
 
 def rq_error_handler(job: Job, exc_type, exc_value, traceback):
@@ -32,7 +31,7 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
 
 if __name__ == '__main__':
     with Connection():
-        queue_names = ['default']
+        queue_names = [q.name]
         worker_name = str(uuid4())
         w = Worker(queue_names, name=worker_name, connection=redis_conn, exception_handlers=[rq_error_handler])
         w.work()

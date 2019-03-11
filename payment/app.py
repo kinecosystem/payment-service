@@ -149,5 +149,5 @@ def status():
 @app.route('/config', methods=['GET'])
 def get_config():
     return jsonify({'horizon_url': config.STELLAR_HORIZON_URL,
-                    'network_passphrase': get_network_passphrase(config.STELLAR_NETWORK),
+                    'network_passphrase': config.STELLAR_NETWORK,
                     })

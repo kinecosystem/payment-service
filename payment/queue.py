@@ -12,7 +12,7 @@ from .statsd import statsd
 from .blockchain import Blockchain, get_sdk, root_account
 from kin import KinErrors, Builder
 
-q = Queue(connection=redis_conn)
+q = Queue(connection=redis_conn, name='kin3')
 log = get_log('rq.worker')
 
 

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "c9942c6ea65b96560ba69be061003a3217a818e2b7b9e36bf5e7e99043a59bac"
+            "sha256": "2b86fdfda8c9d0cdb9685adc4b37568ffdfee44e0d2631dc797dacfa85cbe8ce"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -147,11 +147,10 @@
         },
         "kin-sdk": {
             "hashes": [
-                "sha256:1d18bf70f1868515cd55aa21103fec72d7d1a693702d835201a6516acdd46771",
-                "sha256:736766bd759e15d4c2d1b996b521ad05e528c44d5f363024125b2890638a39a9"
+                "sha256:f80c0f7506ce703d09c3848828eff8ec2040f6609dd236dc74c55a13f3242e65"
             ],
             "index": "pypi",
-            "version": "==2.3.1"
+            "version": "==2.3"
         },
         "markupsafe": {
             "hashes": [
