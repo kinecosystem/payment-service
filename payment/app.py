@@ -126,12 +126,11 @@ def whitelist():
 @handle_errors
 def whitelist_submit():
     network_id = root_wallet.read_sdk.environment.passphrase_hash
+    log.info('request', request=request.get_json())
     submit_request = SubmitTransactionRequest(request.get_json())
-    submit_request.network_id = network_id
     submit_request.validate()
-    submit_request.verify_transaction()
+    # submit_request.verify_transaction()
     enqueue_submit_tx(submit_request)
-    # We can also directly send the XDR without the build with root_account.horizon.submit()
     return jsonify(), 201
 
 
