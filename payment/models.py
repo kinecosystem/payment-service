@@ -59,13 +59,12 @@ class PaymentRequest(ModelWithStr):
     callback = StringType(required=True)  # a webhook to call when a payment is complete
 
 
-
 class WhitelistRequest(ModelWithStr):
     id = StringType(required=True)
     sender_address = StringType(required=True)
     recipient_address = StringType(required=True)
     amount = IntType(required=True)
-    xdr = StringType(required=True)
+    transaction = StringType(required=True)
     app_id = StringType(required=True)
     network_id = StringType()
 
@@ -80,11 +79,11 @@ class WhitelistRequest(ModelWithStr):
     def verify_transaction(self):
         """Verify that the encoded transaction matches our expectations"""
         try:
-            decoded_tx = decode_transaction(self.xdr, self.network_id)
+            decoded_tx = decode_transaction(self.transaction, self.network_id)
         except Exception as e:
             if isinstance(e, KinErrors.CantSimplifyError):
                 raise TransactionMismatch('Unexpected transaction')
-            log.error('Couldn\'t decode tx with xdr: {}'.format(self.xdr))
+            log.error('Couldn\'t decode tx with transaction xdr: {}'.format(self.transaction))
             raise TransactionMismatch('Transaction could not be decoded')
         if decoded_tx.memo is None:
             raise TransactionMismatch('Unexpected memo: Empty')
@@ -101,7 +100,7 @@ class WhitelistRequest(ModelWithStr):
     def whitelist(self) -> str:
         """Sign and return a transaction to whitelist it"""
         from .blockchain import root_account
-        return root_account.whitelist_transaction({'envelope': self.xdr,
+        return root_account.whitelist_transaction({'envelope': self.transaction,
                                                   'network_id': self.network_id})
 
 

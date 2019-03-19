@@ -148,7 +148,7 @@ def submit_tx_callback(submit_request: dict):
     log.info('submit_tx_callback received', submit_request=submit_request)
     submit_request = SubmitTransactionRequest(submit_request)
     tx_builder = root_account.get_transaction_builder(0)
-    tx_builder.import_from_xdr(submit_request.xdr)
+    tx_builder.import_from_xdr(submit_request.transaction)
     tx_builder.sign(config.STELLAR_BASE_SEED)
     # We can also directly send the XDR without the build with root_account.horizon.submit()
     with lock(redis_conn, 'submit:{}'.format(submit_request.id), blocking_timeout=120):
