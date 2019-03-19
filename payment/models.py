@@ -60,7 +60,7 @@ class PaymentRequest(ModelWithStr):
 
 
 class WhitelistRequest(ModelWithStr):
-    id = StringType(required=True)
+    id = StringType(required=True)  # AKA order id
     sender_address = StringType(required=True)
     recipient_address = StringType(required=True)
     amount = IntType(required=True)
