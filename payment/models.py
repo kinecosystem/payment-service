@@ -92,7 +92,7 @@ class WhitelistRequest(ModelWithStr):
         if len(memo_parts) != 3:
             raise TransactionMismatch('Unexpected memo: expected a 3 part memo')
         self._compare_attr(memo_parts[1], self.app_id, 'App id')
-        self._compare_attr(memo_parts[2], self.order_id, 'Order id')
+        self._compare_attr(memo_parts[2], self.id, 'id')
         self._compare_attr(decoded_tx.source, self.sender_address, 'Sender account')
         self._compare_attr(decoded_tx.operation.destination, self.recipient_address, 'Destination account')
         self._compare_attr(decoded_tx.operation.amount, self.amount, 'Amount')
