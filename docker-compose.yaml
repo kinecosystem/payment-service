@@ -21,7 +21,6 @@ services:
       STELLAR_ADDRESS: ${STELLAR_ADDRESS}
       STELLAR_HORIZON_URL: ${STELLAR_HORIZON_URL}
       STELLAR_NETWORK: ${STELLAR_NETWORK}
-      STELLAR_INITIAL_XLM_AMOUNT: ${STELLAR_INITIAL_XLM_AMOUNT}
 
   payment-worker-v3:
     image: kinecosystem/payment-service-v3
