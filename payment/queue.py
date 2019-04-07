@@ -237,7 +237,5 @@ def report_balance(root_address, channel_addresses=[]):
         wallet = Blockchain.get_wallet(root_address)
         statsd.gauge('root_wallet.kin_balance', wallet.kin_balance,
                      tags=['address:%s' % root_address])
-        statsd.gauge('root_wallet.native_balance', wallet.native_balance,
-                     tags=['address:%s' % root_address])
     except Exception:
         pass  # don't fail
