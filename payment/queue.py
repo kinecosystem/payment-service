@@ -48,11 +48,8 @@ def __enqueue_callback(callback: str, app_id: str, objekt: str, state: str, acti
     log.info('enqueue result', result=result, value=value)
 
 
-def enqueue_report_wallet_balance(root_wallet_address, channel_wallet_addresses):
-    q.enqueue(
-        report_balance,
-        root_wallet_address,
-        channel_wallet_addresses)
+def enqueue_report_wallet_balance(root_wallet_address):
+    q.enqueue(report_balance, root_wallet_address, [])
 
 
 def enqueue_payment_callback(callback: str, wallet_address: str, value: Payment):
@@ -150,7 +147,7 @@ def create_wallet_and_callback(wallet_request: dict):
     try:
         with get_sdk(config.STELLAR_BASE_SEED) as blockchain:
             create_wallet(blockchain, wallet_request)
-            enqueue_report_wallet_balance(blockchain.root_address, blockchain.channel_addresses)
+            enqueue_report_wallet_balance(blockchain.root_address)
 
     except kin.AccountExistsError:
         statsd.increment('wallet.exists', tags=['app_id:%s' % wallet_request.app_id])
@@ -187,7 +184,7 @@ def pay(payment_request: PaymentRequest):
                 payment_request.amount,
                 payment_request.app_id,
                 payment_request.id)
-            enqueue_report_wallet_balance(blockchain.root_address, blockchain.channel_addresses)
+            enqueue_report_wallet_balance(blockchain.root_address)
 
         log.info('paid transaction', tx_id=tx_id, payment_id=payment_request.id)
         statsd.inc_count('transaction.paid',
@@ -209,7 +206,7 @@ def pay(payment_request: PaymentRequest):
     return payment
 
 
-def report_balance(root_address, channel_addresses):
+def report_balance(root_address, channel_addresses=[]):
     """report root wallet balance metrics to statsd."""
     try:
         wallet = Blockchain.get_wallet(root_address)
@@ -217,10 +214,5 @@ def report_balance(root_address, channel_addresses):
                      tags=['address:%s' % root_address])
         statsd.gauge('root_wallet.native_balance', wallet.native_balance,
                      tags=['address:%s' % root_address])
-        for channel_address in channel_addresses:
-            wallet = Blockchain.get_wallet(channel_address)
-            statsd.gauge('channel_wallet.native_balance', wallet.native_balance,
-                         tags=['address:%s' % channel_address])
-
     except Exception:
         pass  # don't fail
