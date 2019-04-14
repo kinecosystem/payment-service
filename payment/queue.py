@@ -79,7 +79,7 @@ def enqueue_wallet_callback(request: WalletRequest):
         objekt='wallet',
         state='success',
         action='create',
-        value={'id': request.id})
+        value={'id': request.id, 'wallet_address': request.wallet_address})
 
 
 def enqueue_wallet_failed_callback(request: WalletRequest, reason: str):
@@ -89,7 +89,7 @@ def enqueue_wallet_failed_callback(request: WalletRequest, reason: str):
         objekt='wallet',
         state='fail',
         action='create',
-        value={'id': request.id, 'reason': reason})
+        value={'id': request.id, 'reason': reason, 'wallet_address': request.wallet_address})
 
 
 def call_callback(callback: str, app_id: str, objekt: str, state: str, action: str, value: dict):
