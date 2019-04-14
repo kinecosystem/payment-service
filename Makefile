@@ -29,9 +29,6 @@ worker-prod:
 watcher-prod:
 	. ./prod.sh && . ./secrets/.secrets && python3 watcher.py
 
-install-prod:
-	pip3 install -r requirements.txt
-
 
 # docker related
 revision := $(shell git rev-parse --short HEAD)
