@@ -208,6 +208,7 @@ class TransactionRecord(ModelWithStr):
     asset_issuer = StringType()
     paging_token = StringType(required=True)
     type = StringType(required=True)
+    created_at = DateTimeType(required=True, drop_tzinfo=True)
 
 
 class CursorManager:

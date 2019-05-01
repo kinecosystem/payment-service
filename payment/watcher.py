@@ -1,6 +1,7 @@
 import threading
 import time
 import typing
+from datetime import datetime
 
 from .blockchain import Blockchain
 from .queue import enqueue_payment_callback
@@ -31,11 +32,13 @@ def get_last_cursor():
 
 def on_payment(address: str, services: typing.List[Service], payment: Payment):
     """handle a new payment from an address."""
-    log.info('got payment', address=address, payment=payment)
+    log.info('got payment %s' % payment.id, address=address, payment=payment)
     statsd.inc_count('payment_observed',
                      payment.amount,
                      tags=['app_id:%s' % payment.app_id,
                            'address:%s' % address])
+
+    statsd.timing('payment_lag', (datetime.utcnow() - payment.timestamp).total_seconds())
 
     for service in services:
         enqueue_payment_callback(service.callback, address, payment)
