@@ -1,9 +1,6 @@
 import contextlib
-# import stellar_base
 from typing import List
-# from kin.errors import AccountExistsError, AccountNotFoundError
-# from kin.stellar.horizon_models import TransactionData
-# from kin.sdk import Keypair, ChannelManager, SDK
+from kin.errors import AccountExistsError
 
 from kin.errors import AccountNotFoundError
 from kin.transactions import SimplifiedTransaction
@@ -35,13 +32,13 @@ class Blockchain(object):
 
     def create_wallet(self, public_address: str) -> str:
         """create a wallet."""
-        # try:
-        #     account_exists = self.write_sdk.check_account_exists(public_address)
-        # except Exception as e:
-        #     log.info('failed checking wallet state', public_address=public_address)
-        # else:
-        #     if account_exists:
-        #         raise AccountExistsError
+        try:
+            account_exists = self.get_wallet(public_address)
+        except Exception as e:
+            log.info('failed checking wallet state', public_address=public_address)
+        else:
+            if account_exists:
+                raise AccountExistsError
 
         log.info('creating wallet', public_address=public_address)
 
