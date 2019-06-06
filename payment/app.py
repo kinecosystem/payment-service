@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 from .transaction_flow import TransactionFlow
 from .errors import AlreadyExistsError, PaymentNotFoundError, ServiceNotFoundError
 from .middleware import handle_errors
-from .models import Payment, WalletRequest, PaymentRequest, Service, WhitelistRequest, SubmitTransactionRequest
+from .models import Payment, WalletRequest, PaymentRequest, Service, WhitelistRequest, SubmitTransactionRequest, LinkingRequest
 from .queue import enqueue_create_wallet, enqueue_send_payment, enqueue_submit_tx
 from .blockchain import Blockchain, root_wallet
 
@@ -119,6 +119,15 @@ def whitelist():
     whitelist_request.verify_transaction()
     # Transaction is verified, whitelist it and return to marketplace
     whitelisted_tx = whitelist_request.whitelist()
+    return jsonify({'tx': whitelisted_tx}), 200
+
+
+@app.route('/linking/whitelist', methods=['POST'])
+@handle_errors
+def whitelist():
+    linking_request = LinkingRequest(request.get_json())
+    # Linking operation is verified, whitelist it and return to client
+    whitelisted_tx = linking_request.whitelist()
     return jsonify({'tx': whitelisted_tx}), 200
 
 

@@ -58,6 +58,15 @@ class PaymentRequest(ModelWithStr):
     id = StringType(required=True)
     callback = StringType(required=True)  # a webhook to call when a payment is complete
 
+class LinkingRequest(ModelWithStr):
+    transaction = StringType(required=True)
+    network_id = StringType()
+
+    def whitelist(self) -> str:
+        """Sign and return a transaction to whitelist it"""
+        from .blockchain import root_account
+        return root_account.whitelist_transaction({'envelope': self.transaction,
+                                                  'network_id': self.network_id})
 
 class WhitelistRequest(ModelWithStr):
     id = StringType(required=True)  # AKA order id
