@@ -1,40 +1,35 @@
 version: "3"
 
+
 services:
 
   payment-service-v3:
-    image: kinecosystem/payment-service-v3
+    image: kinecosystem/payment-service-v3-kinnovation
     volumes:
       - .:/opt/app
     ports:
-      - 3000
-    links:
-      - redis
+      - 4998:4998
+    restart: always
     environment:
       &app_env_vars
       APP_DEBUG: 'True'
-      APP_PORT: 3000
+      APP_PORT: 4998
       APP_HOST: '0.0.0.0'
-      APP_NAME: 'payment-service-v3'
-      APP_REDIS: redis://redis:6379/0
+      APP_NAME: 'payment-service-v3-kinnovation'
+      APP_REDIS: redis://kin-app-server-stage.qugi0x.0001.use1.cache.amazonaws.com:6379/1
       STELLAR_BASE_SEED: ${STELLAR_BASE_SEED}
       STELLAR_ADDRESS: ${STELLAR_ADDRESS}
       STELLAR_HORIZON_URL: ${STELLAR_HORIZON_URL}
       STELLAR_NETWORK: ${STELLAR_NETWORK}
+      STELLAR_INITIAL_XLM_AMOUNT: ${STELLAR_INITIAL_XLM_AMOUNT}
 
   payment-worker-v3:
     image: kinecosystem/payment-service-v3
     volumes:
       - .:/opt/app
+    restart: always
     command: pipenv run python worker.py
-    links:
-      - redis
     environment:
       <<: *app_env_vars
       CHANNEL_SALT: some_salt
       MAX_CHANNELS: 1
-
-  redis:
-    image: redis
-    ports:
-      - 6379
