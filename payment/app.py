@@ -126,6 +126,7 @@ def whitelist():
 @handle_errors
 def linking_whitelist():
     linking_request = LinkingRequest(request.get_json())
+    linking_request.verify_transaction()
     # Linking operation is verified, whitelist it and return to client
     whitelisted_tx = linking_request.whitelist()
     return jsonify({'tx': whitelisted_tx}), 200
