@@ -62,6 +62,31 @@ class LinkingRequest(ModelWithStr):
     transaction = StringType(required=True)
     network_id = StringType()
 
+    def verify_transaction(self):
+        """Verify that the encoded transaction matches our expectations"""
+        from kin_base.operation import SetOptions, ManageData
+        try:
+            decoded_tx = decode_transaction(self.transaction, self.network_id, False)
+        except Exception as e:
+            log.error('Couldn\'t decode tx with transaction xdr: {}'.format(self.transaction))
+            raise TransactionMismatch('Transaction could not be decoded')
+
+        if len(decoded_tx.operations) != 2:
+            raise TransactionMismatch('Unexpected operations count: expected 2 operations')
+
+        if not isinstance(decoded_tx.operations[0], SetOptions):
+            log.error('Unexpected operation 0 in transaction xdr: {}'.format(self.transaction))
+            raise TransactionMismatch('Unexpected operation in index 0: expecting SetOperation')
+
+        if not isinstance(decoded_tx.operations[1], ManageData):
+            log.error('Unexpected operation 1 in transaction xdr: {}'.format(self.transaction))
+            raise TransactionMismatch('Unexpected operation in index 1: expecting ManageData')
+
+        if decoded_tx.operations[0].signer_address != decoded_tx.source.decode():
+            log.error('invalid signer in operation in transaction xdr: {}'.format(self.transaction))
+            raise TransactionMismatch('Unexpected signer in SetOptions')
+            
+
     def whitelist(self) -> str:
         """Sign and return a transaction to whitelist it"""
         from .blockchain import root_account

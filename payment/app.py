@@ -124,7 +124,7 @@ def whitelist():
 
 @app.route('/linking/whitelist', methods=['POST'])
 @handle_errors
-def whitelist():
+def linking_whitelist():
     linking_request = LinkingRequest(request.get_json())
     # Linking operation is verified, whitelist it and return to client
     whitelisted_tx = linking_request.whitelist()

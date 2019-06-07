@@ -8,7 +8,7 @@ COPY Pipfile* ./
 # install build tools and pipenv
 RUN apk add -qU --no-cache -t .fetch-deps git build-base \
     && pip install -U pip pipenv \
-    && pipenv install \
+    && pipenv install --verbose \
     && apk del -q .fetch-deps
 
 # copy the code
