@@ -38,7 +38,7 @@ class ParseError(ValueError):
     pass
 
 
-class PersitentError(Exception):
+class PersistentError(Exception):
     """an error that shouldn't be retried."""
 
 

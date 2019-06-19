@@ -3,17 +3,18 @@ from rq import Queue
 import requests
 
 from . import config
-from .errors import PaymentNotFoundError, PersitentError
+from .errors import PaymentNotFoundError, PersistentError
 from .log import get as get_log
 from .models import Payment, PaymentRequest, WalletRequest, SubmitTransactionRequest
 from .utils import retry, lock
 from .redis_conn import redis_conn
 from .statsd import statsd
-from .blockchain import Blockchain, get_sdk, root_account
+from .blockchain import Blockchain, get_sdk, root_wallet
 from kin import KinErrors, Builder
 
 q = Queue(connection=redis_conn, name='kin3')
 log = get_log('rq.worker')
+PERSISTENT_ERRORS = (KinErrors.AccountNotFoundError, KinErrors.AccountNotActivatedError, KinErrors.RequestError)
 
 
 def enqueue_send_payment(payment_request: PaymentRequest):
@@ -25,9 +26,9 @@ def enqueue_send_payment(payment_request: PaymentRequest):
 
 
 def enqueue_submit_tx(submit_request: SubmitTransactionRequest):
-    # statsd.inc_count('transaction.enqueue',
-    #                 payment_request.amount,
-    #                 tags=['app_id:%s' % payment_request.app_id])
+    statsd.inc_count('submit_transaction.enqueue',
+                     submit_request.amount,
+                     tags=['app_id:%s' % submit_request.app_id])
     result = q.enqueue(submit_tx_callback, submit_request.to_primitive())
     log.info('enqueue result', result=result, submit_request=submit_request)
 
@@ -71,7 +72,7 @@ def enqueue_payment_callback(callback: str, value: Payment, action: str):
         value=value.to_primitive())
 
 
-def enqueue_payment_failed_callback(request: Union[PaymentRequest, SubmitTransactionRequest] , reason: str):
+def enqueue_payment_failed_callback(request: Union[PaymentRequest, SubmitTransactionRequest], reason: str):
     __enqueue_callback(
         callback=request.callback,
         app_id=request.app_id,
@@ -144,22 +145,19 @@ def pay_and_callback(payment_request: dict):
 
 
 def submit_tx_callback(submit_request: dict):
-    """lock, try to pay and callback."""
+    """Submit a given transaction to the blockchain."""
     log.info('submit_tx_callback received', submit_request=submit_request)
     submit_request = SubmitTransactionRequest(submit_request)
-    tx_builder = root_account.get_transaction_builder(0)
-    tx_builder.import_from_xdr(submit_request.transaction)
-    tx_builder.sign(config.STELLAR_BASE_SEED)
-    # We can also directly send the XDR without the build with root_account.horizon.submit()
-    with lock(redis_conn, 'submit:{}'.format(submit_request.id), blocking_timeout=120):
-        try:
-            tx_id = root_account.submit_transaction(tx_builder)
-        except Exception as e:
-            enqueue_payment_failed_callback(submit_request, str(e))
-            raise  # crash the job
-        else:
-            payment = Payment.from_payment_request(submit_request, submit_request.sender_address, tx_id)
-            enqueue_payment_callback(submit_request.callback, payment, 'receive')
+
+    try:
+        tx_id = root_wallet.submit_transaction(submit_request.transaction)
+    except PERSISTENT_ERRORS as e:
+        raise PersistentError(e)
+    except Exception as e:
+        enqueue_payment_failed_callback(submit_request, str(e))
+        raise  # crash the job
+    payment = Payment.from_payment_request(submit_request, submit_request.sender_address, tx_id)
+    enqueue_payment_callback(submit_request.callback, payment, 'receive')
 
 
 def create_wallet_and_callback(wallet_request: dict):
@@ -215,8 +213,8 @@ def pay(payment_request: PaymentRequest):
         statsd.inc_count('transaction.paid',
                          payment_request.amount,
                          tags=['app_id:%s' % payment_request.app_id])
-    except (KinErrors.AccountNotFoundError, KinErrors.AccountNotActivatedError, KinErrors.RequestError) as e:
-        raise PersitentError(e)
+    except PERSISTENT_ERRORS as e:
+        raise PersistentError(e)
     except Exception as e:
         statsd.increment('transaction.failed',
                          tags=['app_id:%s' % payment_request.app_id])

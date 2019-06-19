@@ -11,13 +11,12 @@ from kin_base import Keypair as BaseKeypair
 
 from . import config
 from .models import Payment, Wallet, TransactionRecord
-# from .utils import get_network_name
 from .log import get as get_log
-# from .errors import ParseError, WalletNotFoundError
 from .errors import WalletNotFoundError
 from .config import STELLAR_ENV
 
 log = get_log('rq.worker')
+
 
 class Blockchain(object):
     read_sdk = KinClient(STELLAR_ENV)
@@ -53,6 +52,11 @@ class Blockchain(object):
         log.info('sending kin to', address=public_address)
         # We use 'build_send_kin' instead of 'send_kin' since we have our method of managing seeds in redis
         builder = self.write_sdk.build_send_kin(public_address, amount, fee=self.minimum_fee, memo_text=payment_id)
+        return self._sign_and_send_tx(builder)
+
+    def submit_transaction(self, transaction):
+        builder = root_account.get_transaction_builder(0)
+        builder.import_from_xdr(transaction)
         return self._sign_and_send_tx(builder)
 
     @staticmethod
@@ -119,7 +123,7 @@ class Blockchain(object):
 
 # The wallet that funds all other channels and sub-funding-wallets
 root_account = Blockchain.read_sdk.kin_account(config.STELLAR_BASE_SEED, channel_secret_keys=[], app_id='kin')  # We need to choose an app_id
-root_wallet = Blockchain(root_account, root_account.keypair.secret_seed)
+root_wallet = Blockchain(root_account, channel=root_account.keypair.secret_seed)
 
 
 @contextlib.contextmanager

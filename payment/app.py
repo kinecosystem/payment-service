@@ -125,11 +125,10 @@ def whitelist():
 @app.route('/tx/submit', methods=['POST'])
 @handle_errors
 def whitelist_submit():
-    network_id = root_wallet.read_sdk.environment.passphrase_hash
     log.info('request', request=request.get_json())
     submit_request = SubmitTransactionRequest(request.get_json())
     submit_request.validate()
-    # submit_request.verify_transaction()
+    submit_request.verify_transaction()
     enqueue_submit_tx(submit_request)
     return jsonify(), 201
 
