@@ -128,7 +128,7 @@ def whitelist_submit():
     log.info('request', request=request.get_json())
     submit_request = SubmitTransactionRequest(request.get_json())
     submit_request.validate()
-    submit_request.verify_transaction()
+    # submit_request.verify_transaction() # TODO can we add this back?
     enqueue_submit_tx(submit_request)
     return jsonify(), 201
 
