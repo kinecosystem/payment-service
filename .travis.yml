@@ -21,6 +21,7 @@ after_success:
 branches:
   only:
     - master
+    - lior/ECO-1091_kin_federation_support
 
 deploy:
   provider: script

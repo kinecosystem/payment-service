@@ -57,7 +57,8 @@ class Blockchain(object):
     def submit_transaction(self, transaction):
         builder = root_account.get_transaction_builder(0)
         builder.import_from_xdr(transaction)
-        return self._sign_and_send_tx(builder)
+        builder.sign(self.write_sdk.keypair.secret_seed)
+        return self.write_sdk.submit_transaction(builder)
 
     @staticmethod
     def get_wallet(public_address: str) -> Wallet:

@@ -3,7 +3,7 @@ import time
 import random
 import mock
 from payment.app import app
-from payment import config;
+from payment import config
 
 config.MAX_CHANNELS = 3
 
@@ -11,8 +11,8 @@ from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
 from payment.utils import lock, safe_int
-from payment.models import Payment, PaymentRequest, Service
-from payment.queue import pay
+from payment.models import Payment, PaymentRequest, Service, SubmitTransactionRequest
+from payment.queue import pay, submit_tx_callback
 
 
 def test_lock():
@@ -178,6 +178,24 @@ def test_payment_to_burnt():
                         'callback': 'test',
                         'amount': 1})
     pay(p)
+
+
+def test_bad_seq():
+    from generate_funding_address import generate, Keypair
+    from payment.blockchain import get_sdk, root_wallet
+
+    public, private = generate()
+    config.STELLAR_BASE_SEED = private
+
+    builder = root_wallet.write_sdk.build_send_kin(public, 1, fee=root_wallet.minimum_fee, memo_text="blah")
+    #root_wallet._sign_and_send_tx(builder)
+
+    builder.set_channel(private)
+    builder.sequence = "123456"  # wrong sequnece
+    builder.sign(private)
+    xdr = builder.gen_xdr()
+    print(xdr)
+   #  tx_id = root_wallet.write_sdk.submit_transaction(builder)
 
 
 @pytest.fixture
