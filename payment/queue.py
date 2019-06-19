@@ -10,7 +10,8 @@ from .utils import retry, lock
 from .redis_conn import redis_conn
 from .statsd import statsd
 from .blockchain import Blockchain, get_sdk, root_wallet
-from kin import KinErrors, Builder
+from kin import KinErrors
+
 
 q = Queue(connection=redis_conn, name='kin3')
 log = get_log('rq.worker')

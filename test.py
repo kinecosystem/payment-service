@@ -11,8 +11,9 @@ from payment.channel_factory import get_next_channel_id, generate_key
 from payment.blockchain import root_wallet
 from payment.redis_conn import redis_conn
 from payment.utils import lock, safe_int
-from payment.models import Payment, PaymentRequest, Service, SubmitTransactionRequest
-from payment.queue import pay, submit_tx_callback
+from payment.models import Payment, PaymentRequest, Service
+from payment.queue import pay
+from kin import KinErrors
 
 
 def test_lock():
@@ -47,7 +48,7 @@ def test_channel_rotate():
                 assert ch1 != ch2 != ch0
 
 
-def test_generate_channels():
+def _test_generate_channels():
     from payment.blockchain import Blockchain, get_sdk
     from payment import config
     print('started')
@@ -158,19 +159,14 @@ def test_old_new_watchers(client):
     assert set(['perm-1', 'perm-2', 'temp-1', 'temp-2']) - set(res.json['watchers'].keys()) == set()
 
 
-def test_payment_to_burnt():
-    from generate_funding_address import generate, Keypair
-    from payment.blockchain import get_sdk
+def _test_payment_to_burnt():
+    from generate_funding_address import generate
 
     public, private = generate()
     config.STELLAR_BASE_SEED = private
     app_id = 'test'
-    wallet = Keypair.random()
-    target_address = wallet.address().decode()
-    print(public, target_address)
 
-    with get_sdk(private) as blockchain:
-        blockchain.create_wallet(target_address, app_id)
+    target_address, seed = generate()
 
     p = PaymentRequest({'id': 'test:%s' % target_address,
                         'app_id': app_id,
@@ -181,20 +177,23 @@ def test_payment_to_burnt():
 
 
 def test_bad_seq():
-    from generate_funding_address import generate, Keypair
+    from generate_funding_address import generate
     from payment.blockchain import get_sdk, root_wallet
 
     public, private = generate()
     config.STELLAR_BASE_SEED = private
 
     builder = root_wallet.write_sdk.build_send_kin(public, 1, fee=root_wallet.minimum_fee, memo_text="blah")
-    #root_wallet._sign_and_send_tx(builder)
-
     builder.set_channel(private)
     builder.sequence = "123456"  # wrong sequnece
     builder.sign(private)
     xdr = builder.gen_xdr()
     print(xdr)
+
+    try:
+        root_wallet.submit_transaction(xdr)
+    except KinErrors.RequestError:
+        pass
    #  tx_id = root_wallet.write_sdk.submit_transaction(builder)
 
 
