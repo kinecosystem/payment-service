@@ -1,0 +1,49 @@
+
+#Run example, including placeholder substitution:
+#  cat payment-service-deployment.yaml \
+#  | sed  " \
+#  s/__ENVIRONMENT/ci/; \
+#  s/__SERVER_ROLE/public/; \
+#  s/__DEBUG/False/" \
+#  s/__VERSION/latest/" \
+#  | kubectl apply  -f -
+
+#TODO: add resources (CPU/Memory) limitations
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  annotations:
+        iam.amazonaws.com/role: ci-payment-service
+  labels:
+    app: payment-__ROLE-test
+  name: payment-__ROLE-test
+  namespace: __ENVIRONMENT
+spec:
+  #time to save pod before cleanup
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: payment-__ROLE-test
+        name: payment-__ROLE-test
+        version: "__VERSION"
+    spec:
+
+      restartPolicy: Never
+      containers:
+        - command:  ["/bin/sh"]
+          args: [ "-c",  ". ./config/getKeys.sh ; ./config/getJWT.sh; npm run transpile; npm test" ]
+          image: kinecosystem/payment-__ROLE-ittiel:__VERSION
+          name: payment-__ROLE
+          ports:
+          - containerPort: 3000
+          env:
+            - name: ENVIRONMENT
+              # i.e "ci"
+              value: __ENVIRONMENT
+            - name: ROLE
+              value: __ROLE
+              # Debug startup script
+            - name: DEBUG
+              value: __DEBUG
