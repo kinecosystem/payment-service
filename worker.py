@@ -26,7 +26,7 @@ def rq_error_handler(job: Job, exc_type, exc_value, traceback):
         q.enqueue_job(job)
     else:
         statsd.increment('worker_persistent_error', tags=['job:%s' % job.func_name, 'error_type:%s' % exc_type, 'error:%s' % exc_value])
-        log.error('not retriying PersitentError', e=exc_value)
+        log.error('PersistentError: not retrying', e=exc_value)
 
 
 if __name__ == '__main__':
