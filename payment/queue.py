@@ -12,10 +12,15 @@ from .statsd import statsd
 from .blockchain import Blockchain, get_sdk, root_wallet
 from kin import KinErrors
 
-
 q = Queue(connection=redis_conn, name='kin3')
 log = get_log('rq.worker')
-PERSISTENT_ERRORS = (KinErrors.AccountNotFoundError, KinErrors.AccountNotActivatedError, KinErrors.RequestError)
+PERSISTENT_ERRORS = (
+    KinErrors.AccountNotFoundError,
+    KinErrors.AccountNotActivatedError,
+    KinErrors.RequestError,
+    KinErrors.LowBalanceError,
+    KinErrors.WrongNetworkError,
+)
 
 
 def enqueue_send_payment(payment_request: PaymentRequest):
