@@ -1,14 +1,13 @@
 
 #Run example, including placeholder substitution:
-#  cat payment-service-deployment.yaml \
-#  | sed  " \
-#  s/__ENVIRONMENT/ci/; \
-#  s/__SERVER_ROLE/public/; \
-#  s/__DEBUG/False/" \
-#  s/__VERSION/latest/" \
-#  | kubectl apply  -f -
+#cat k8s/payment-service-test-deployment.yaml   | sed  " \
+#  s/__ENVIRONMENT/ci/g; \
+#  s/__ROLE/web/g; \
+#  s/__DEBUG/False/g; \
+#  s/__VERSION/1.16/g"   | kubectl apply  -f -
 
 #TODO: add resources (CPU/Memory) limitations
+
 apiVersion: batch/v1
 kind: Job
 
@@ -29,21 +28,18 @@ spec:
         name: payment-__ROLE-test
         version: "__VERSION"
     spec:
-
       restartPolicy: Never
       containers:
-        - command:  ["/bin/sh"]
-          args: [ "-c",  ". ./config/getKeys.sh ; ./config/getJWT.sh; npm run transpile; npm test" ]
-          image: kinecosystem/payment-__ROLE-ittiel:__VERSION
-          name: payment-__ROLE
+        - command:  [ "/bin/sh" ]
+          args: [ "-c",  "./config/test.sh" ]
+          image: kinecosystem/payment-service-ittiel:__VERSION
+          name: payment-__ROLE-test
           ports:
           - containerPort: 3000
           env:
             - name: ENVIRONMENT
-              # i.e "ci"
-              value: __ENVIRONMENT
+              value: "__ENVIRONMENT"
             - name: ROLE
-              value: __ROLE
-              # Debug startup script
+              value: "__ROLE"
             - name: DEBUG
-              value: __DEBUG
+              value: "__DEBUG"

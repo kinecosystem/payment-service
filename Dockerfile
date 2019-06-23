@@ -10,7 +10,7 @@ COPY Pipfile* ./
 RUN apk update && apk add -qU --no-cache -t .fetch-deps git build-base
 RUN apk add jq bash curl\
     && pip install -U pip pipenv \
-    && pipenv install \
+    && pipenv install -d \
     && apk del -q .fetch-deps
 
 RUN  pip install awscli --upgrade
@@ -36,8 +36,8 @@ RUN chmod 775 ./config/*.sh
 #get ssm paramaeter as environment variable
 # run the api server
 #For backward compatibility, overriden by the k8s deployment yaml
-#CMD ["/bin/sh", "-c",   "./startup.sh" ]
+#CMD ["/bin/sh", "-c",   "./config/startup.sh" ]
 
 # run the api server
 #ENTRYPOINT ["/bin/sh", "-c",   "./config/startup.sh"]
-#CMD pipenv run gunicorn -b $APP_HOST:$APP_PORT payment.app:app
+CMD pipenv run gunicorn -b $APP_HOST:$APP_PORT payment.app:app

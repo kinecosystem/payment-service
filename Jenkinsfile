@@ -60,7 +60,7 @@ pipeline {
                 ]) {
                     sh '''
                         #create namespace if doesn't exists
-                    cat k8s/namespace.yaml | sed 's/__ENVIRONMENT'"/${Environment}/g"  |kubectl apply -f - || true
+                        cat k8s/namespace.yaml | sed 's/__ENVIRONMENT'"/${Environment}/g" | kubectl apply -f - || true
                         #add new version (in addition to the existing version
                         SED_ARGS="s/__ENVIRONMENT/${Environment}/g; s/__ROLE/${Role}/g; s/__VERSION/${Version}/g; s/__DEBUG/${Debug}/g; s/__REPLICAS/${Replicas}/g"
                         cat k8s/payment-service-deployment.yaml \

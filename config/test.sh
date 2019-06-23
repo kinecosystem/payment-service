@@ -1,11 +1,8 @@
 #!/bin/sh
 
-
-
 # Usage:
 # . ./test.sh  <PATH>
-# Example:
-# . ./test.sh ci marketplace-public
+
 
 
 
@@ -19,6 +16,5 @@ fi
 . ./config/getKeys.sh
 
 
-#echo "Starting: npm tests"
-#npm run transpile
-#npm test
+echo "Starting: integration tests"
+pipenv run py.test --cov=payment ./test.py
