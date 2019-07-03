@@ -1,4 +1,3 @@
-
 #Run example, including placeholder substitution:
 #  cat k8s/payment-service-deployment.yaml \
 #  | sed  " \
@@ -6,10 +5,11 @@
 #  s/__ROLE/web/g; \
 #  s/__DEBUG/False/g; \
 #  s/__REPLICAS/1/g; \
+#  s/__V3/-v3/g; \
 #  s/__VERSION/1.0/g" \
 #  | kubectl apply  -f -
-
 #TODO: add resources (CPU/Memory) limitations
+#TODO: Check support for V3?
 
 apiVersion: apps/v1
 kind: Deployment
@@ -18,19 +18,19 @@ metadata:
   annotations:
         iam.amazonaws.com/role: ci-payment-service
   labels:
-    app: payment-__ROLE
-  name: payment-__ROLE
+    app: payment-__ROLE__V3
+  name: payment-__ROLE__V3
   namespace: __ENVIRONMENT
 spec:
   replicas: __REPLICAS
   selector:
     matchLabels:
-      app: payment-__ROLE
+      app: payment-__ROLE__V3
   template:
     metadata:
       labels:
-        app: payment-__ROLE
-        name: payment-__ROLE
+        app: payment-__ROLE__V3
+        name: payment-__ROLE__V3
         version: "__VERSION"
     spec:
       restartPolicy: Always
@@ -38,7 +38,7 @@ spec:
         - command:  [ "/bin/sh" ]
           args: [ "-c",  "./config/startup.sh" ]
           image: kinecosystem/payment-service-ittiel:__VERSION
-          name: payment-__ROLE
+          name: payment-__ROLE__V3
           ports:
           - containerPort: 3000
           env:

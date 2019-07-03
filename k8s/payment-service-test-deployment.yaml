@@ -15,8 +15,8 @@ metadata:
   annotations:
         iam.amazonaws.com/role: ci-payment-service
   labels:
-    app: payment-__ROLE-test
-  name: payment-__ROLE-test
+    app: payment-service-test
+  name: payment-service-test
   namespace: __ENVIRONMENT
 spec:
   #time to save pod before cleanup
@@ -24,8 +24,8 @@ spec:
   template:
     metadata:
       labels:
-        app: payment-__ROLE-test
-        name: payment-__ROLE-test
+        app: payment-service-test
+        name: payment-service-test
         version: "__VERSION"
     spec:
       restartPolicy: Never
@@ -33,7 +33,9 @@ spec:
         - command:  [ "/bin/sh" ]
           args: [ "-c",  "./config/test.sh" ]
           image: kinecosystem/payment-service-ittiel:__VERSION
-          name: payment-__ROLE-test
+          name: payment-service-test
+          #TODO: check if port can be removed
+          # application port is taken from SSM
           ports:
           - containerPort: 3000
           env:
