@@ -1,0 +1,34 @@
+# Important:
+# Need to create (manually for now) the related hosts on AWS Route53
+
+# Run example, including placeholder substitution:
+#   cat payment-service-ingress.yaml |
+#   sed 's/__ENVIRONMENT'"/ci/g" \
+#   |kubectl apply -f -
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: "ingress-payment-service"
+  namespace: ci
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+
+  labels:
+    app: payment-service-ingress
+spec:
+  rules:
+  - host: __ENVIRONMENT-payment-service.kinecosystembeta.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: payment-service
+          servicePort: 80
+  - host: __ENVIRONMENT-payment-service-v3.kinecosystembeta.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: payment-service-v3
+          servicePort: 80

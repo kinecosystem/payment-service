@@ -1,5 +1,5 @@
 #Run example, including placeholder substitution:
-#  cat k8s/payment-service-deployment.yaml \
+#  cat payment-service-deployment.yaml \
 #  | sed  " \
 #  s/__ENVIRONMENT/ci/g; \
 #  s/__ROLE/web/g; \
@@ -37,7 +37,7 @@ spec:
       containers:
         - command:  [ "/bin/sh" ]
           args: [ "-c",  "./config/startup.sh" ]
-          image: kinecosystem/payment-service-ittiel:__VERSION
+          image: kinecosystem/payment-service:__VERSION
           name: payment-__ROLE__V3
           ports:
           - containerPort: 3000

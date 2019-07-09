@@ -32,7 +32,7 @@ spec:
       containers:
         - command:  [ "/bin/sh" ]
           args: [ "-c",  "./config/test.sh" ]
-          image: kinecosystem/payment-service-ittiel:__VERSION
+          image: kinecosystem/payment-service:__VERSION
           name: payment-service-test
           #TODO: check if port can be removed
           # application port is taken from SSM
