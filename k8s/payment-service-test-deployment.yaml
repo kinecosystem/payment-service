@@ -1,0 +1,47 @@
+
+#Run example, including placeholder substitution:
+#cat payment-service-test-deployment.yaml   | sed  " \
+#  s/__ENVIRONMENT/ci/g; \
+#  s/__ROLE/web/g; \
+#  s/__DEBUG/False/g; \
+#  s/__VERSION/1.16/g"   | kubectl apply  -f -
+
+#TODO: add resources (CPU/Memory) limitations
+
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  annotations:
+        iam.amazonaws.com/role: ci-payment-service
+  labels:
+    app: payment-service-test
+  name: payment-service-test
+  namespace: __ENVIRONMENT
+spec:
+  #time to save pod before cleanup
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: payment-service-test
+        name: payment-service-test
+        version: "__VERSION"
+    spec:
+      restartPolicy: Never
+      containers:
+        - command:  [ "/bin/sh" ]
+          args: [ "-c",  "./config/test.sh" ]
+          image: kinecosystem/payment-service:__VERSION
+          name: payment-service-test
+          #TODO: check if port can be removed
+          # application port is taken from SSM
+          ports:
+          - containerPort: 3000
+          env:
+            - name: ENVIRONMENT
+              value: "__ENVIRONMENT"
+            - name: ROLE
+              value: "__ROLE"
+            - name: DEBUG
+              value: "__DEBUG"

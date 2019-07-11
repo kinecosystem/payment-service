@@ -1,0 +1,19 @@
+#Run example, including placeholder substitution:
+  #cat payment-service-service.yaml | sed 's/__ENVIRONMENT'"/ci/g"  |kubectl apply -f -
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: __ENVIRONMENT
+  labels:
+    app: payment-web
+    name: payment-web
+spec:
+  type: NodePort
+  ports:
+   - port: 80
+     #SSM: APP_PORT
+     targetPort: 5000
+  selector:
+   app: payment-web
