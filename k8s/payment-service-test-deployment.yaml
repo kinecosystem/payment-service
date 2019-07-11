@@ -1,6 +1,6 @@
 
 #Run example, including placeholder substitution:
-#cat k8s/payment-service-test-deployment.yaml   | sed  " \
+#cat payment-service-test-deployment.yaml   | sed  " \
 #  s/__ENVIRONMENT/ci/g; \
 #  s/__ROLE/web/g; \
 #  s/__DEBUG/False/g; \

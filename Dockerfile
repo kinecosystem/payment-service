@@ -8,7 +8,7 @@ COPY Pipfile* ./
 # install build tools and pipenv
 
 RUN apk update && apk add -qU --no-cache -t .fetch-deps git build-base
-RUN apk add jq bash curl\
+RUN apk add jq bash curl py-configobj libusb py-pip python-dev gcc linux-headers\
     && pip install -U pip pipenv \
     && pipenv install -d \
     && apk del -q .fetch-deps
