@@ -45,4 +45,4 @@ class TransactionFlow():
                     yield record.from_address, Blockchain.get_transaction_data(record.transaction_hash), record.paging_token
             except KinErrors.CantSimplifyError as e:
                 # We dont expect any transaction that cant be simplified
-                log.warning('warning: while getting record', error=e, record=record)
+                log.warning('warning: while getting record', error=str(e), record=record)
